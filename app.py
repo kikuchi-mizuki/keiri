@@ -750,7 +750,7 @@ def handle_document_creation(event, session, text):
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=f"宛名を「{text}」に設定しました。\n\n次に品目を入力してください。\n\n形式：品目名,単価,数量\n例：Webサイト制作,100000,1\n\n最大10件まで入力できます。")]
+                        messages=[TextMessage(text=f"宛名を「{text}」に設定しました。\n\n次に品目を入力してください。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000\n\n最大10件まで入力できます。")]
                     )
                 )
         except Exception as e:
@@ -808,7 +808,7 @@ def handle_document_creation(event, session, text):
                         line_bot_api.reply_message(
                             ReplyMessageRequest(
                                 reply_token=event.reply_token,
-                                messages=[TextMessage(text="品目が入力されていません。\n\n形式：品目名,単価,数量\n例：Webサイト制作,100000,1")]
+                                messages=[TextMessage(text="品目が入力されていません。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000")]
                             )
                         )
                 except Exception as e:
@@ -857,8 +857,8 @@ def handle_document_creation(event, session, text):
             parts = text.split(',')
             if len(parts) == 3:
                 item_name = parts[0].strip()
-                price = int(parts[1].strip())
-                quantity = int(parts[2].strip())
+                quantity = int(parts[1].strip())
+                price = int(parts[2].strip())
                 items.append({
                     'name': item_name,
                     'price': price,
@@ -890,7 +890,7 @@ def handle_document_creation(event, session, text):
                         line_bot_api.reply_message(
                             ReplyMessageRequest(
                                 reply_token=event.reply_token,
-                                messages=[TextMessage(text="形式が正しくありません。\n\n形式：品目名,単価,数量\n例：Webサイト制作,100000,1")]
+                                messages=[TextMessage(text="形式が正しくありません。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000")]
                             )
                         )
                 except Exception as e:
@@ -905,7 +905,7 @@ def handle_document_creation(event, session, text):
                     line_bot_api.reply_message(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
-                            messages=[TextMessage(text="単価と数量は数字で入力してください。\n\n形式：品目名,単価,数量\n例：Webサイト制作,100000,1")]
+                            messages=[TextMessage(text="数量と単価は数字で入力してください。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000")]
                         )
                     )
             except Exception as e:
