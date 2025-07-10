@@ -240,6 +240,29 @@ def handle_postback(event):
         except Exception as e:
             print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
     
+    elif data == 'confirm_generate':
+        session = session_manager.get_session(user_id)
+        session_manager.update_session(user_id, {'step': 'generate'})
+        generate_document(event, session)
+        return
+    elif data == 'edit_items':
+        session = session_manager.get_session(user_id)
+        session_manager.update_session(user_id, {'step': 'items'})
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text="品目の修正を行います。続けて品目を入力してください。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000\n\n完了したら「完了」と入力してください。")]
+                    )
+                )
+        except Exception as e:
+            print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+            import traceback
+            traceback.print_exc()
+        return
+    
     else:
         show_main_menu(event)
 
@@ -762,8 +785,18 @@ def handle_document_creation(event, session, text):
         items = session.get('items', [])
         doc_type = session.get('document_type')
         
-        if len(items) >= 10:
-            if doc_type == 'estimate':
+        # --- 確認フロー追加 ---
+        def build_summary(session):
+            company = session.get('company_name', '')
+            client = session.get('client_name', '')
+            items = session.get('items', [])
+            total = sum(item['amount'] for item in items)
+            item_lines = '\n'.join([f"・{item['name']}（{item['quantity']}個 × {item['price']}円 = {item['amount']}円）" for item in items])
+            summary = f"【会社名】{company}\n【宛名】{client}\n【品目】\n{item_lines}\n【合計金額】{total:,}円"
+            return summary
+        
+        if len(items) >= 10 or text == "完了":
+            if not items:
                 try:
                     print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
                     with ApiClient(configuration) as api_client:
@@ -771,33 +804,44 @@ def handle_document_creation(event, session, text):
                         line_bot_api.reply_message(
                             ReplyMessageRequest(
                                 reply_token=event.reply_token,
-                                messages=[TextMessage(text="品目は最大10件までです。\n\n書類の生成を開始します...")]
+                                messages=[TextMessage(text="品目が入力されていません。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000")]
                             )
                         )
                 except Exception as e:
                     print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
                     import traceback
                     traceback.print_exc()
-                session_manager.update_session(user_id, {'step': 'generate'})
-                generate_document(event, session)
                 return
-            else:
-                try:
-                    print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
-                    with ApiClient(configuration) as api_client:
-                        line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
-                                messages=[TextMessage(text="品目は最大10件までです。\n\n次に支払い期日を入力してください。\n形式：YYYY-MM-DD\n例：2024-01-31")]
-                            )
+            # 最終確認フロー
+            summary = build_summary(session)
+            try:
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[
+                                TextMessage(text=f"入力内容の最終確認です。\n\n{summary}\n\nこの内容で書類を生成してよろしいですか？"),
+                                TemplateMessage(
+                                    alt_text="内容確認",
+                                    template=ButtonsTemplate(
+                                        title="内容確認",
+                                        text="この内容で書類を生成しますか？",
+                                        actions=[
+                                            PostbackAction(label="はい", data="confirm_generate"),
+                                            PostbackAction(label="修正する", data="edit_items")
+                                        ]
+                                    )
+                                )
+                            ]
                         )
-                except Exception as e:
-                    print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
-                    import traceback
-                    traceback.print_exc()
-                session_manager.update_session(user_id, {'step': 'due_date'})
-                return
+                    )
+            except Exception as e:
+                print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                import traceback
+                traceback.print_exc()
+            session_manager.update_session(user_id, {'step': 'confirm'})
+            return
                 
         if text == "完了":
             if not items:
