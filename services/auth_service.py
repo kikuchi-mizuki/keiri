@@ -14,8 +14,17 @@ class AuthService:
     """Google OAuth認証管理クラス"""
     
     def __init__(self):
+        # 環境変数のデバッグ
+        print(f"[DEBUG] GOOGLE_CLIENT_SECRETS_JSON exists: {os.getenv('GOOGLE_CLIENT_SECRETS_JSON') is not None}")
+        print(f"[DEBUG] GOOGLE_CLIENT_SECRETS_FILE: {os.getenv('GOOGLE_CLIENT_SECRETS_FILE')}")
+        
         # 環境変数からJSON文字列を取得してファイルとして保存
         client_secrets_env = os.getenv('GOOGLE_CLIENT_SECRETS_JSON')
+        
+        # 環境変数が設定されていない場合はエラー
+        if not client_secrets_env:
+            raise ValueError("GOOGLE_CLIENT_SECRETS_JSON environment variable is required")
+        
         if client_secrets_env:
             try:
                 # 絶対パスでclient_secrets.jsonファイルを指定
@@ -47,6 +56,25 @@ class AuthService:
             'https://www.googleapis.com/auth/calendar'
         ]
         self.redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5000/auth/callback')
+        
+        # ファイルの存在確認と内容チェック
+        print(f"[DEBUG] client_secrets_file path: {self.client_secrets_file}")
+        if os.path.exists(self.client_secrets_file):
+            try:
+                with open(self.client_secrets_file, 'r') as f:
+                    content = f.read()
+                    print(f"[DEBUG] client_secrets.json content length: {len(content)}")
+                    if len(content.strip()) == 0:
+                        raise Exception("client_secrets.json is empty")
+                    # JSONとして解析できるかテスト
+                    json.loads(content)
+                    print("[DEBUG] client_secrets.json is valid JSON")
+            except Exception as e:
+                print(f"[ERROR] client_secrets.json validation failed: {e}")
+                raise
+        else:
+            print(f"[ERROR] client_secrets.json file not found at: {self.client_secrets_file}")
+            raise FileNotFoundError(f"client_secrets.json not found at {self.client_secrets_file}")
         
         # 認証フローの設定
         self.flow = Flow.from_client_secrets_file(
