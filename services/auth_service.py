@@ -14,7 +14,11 @@ class AuthService:
     """Google OAuth認証管理クラス"""
     
     def __init__(self):
-        self.client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', 'client_secrets.json')
+        # 絶対パスでclient_secrets.jsonファイルを指定
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        default_client_secrets = os.path.join(base_dir, 'client_secrets.json')
+        self.client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', default_client_secrets)
+        
         self.scopes = [
             'https://www.googleapis.com/auth/spreadsheets',
             'https://www.googleapis.com/auth/drive',
@@ -33,8 +37,13 @@ class AuthService:
     def get_auth_url(self, user_id):
         """認証URLを生成"""
         try:
+            # 絶対パスでclient_secrets.jsonファイルを指定
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            default_client_secrets = os.path.join(base_dir, 'client_secrets.json')
+            client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', default_client_secrets)
+            
             flow = Flow.from_client_secrets_file(
-                self.client_secrets_file,
+                client_secrets_file,
                 scopes=self.scopes,
                 redirect_uri=self.redirect_uri
             )
@@ -57,8 +66,13 @@ class AuthService:
         try:
             print(f"[DEBUG] handle_callback: code={code[:20] if code else 'None'}, state={state}")
             # コールバック時も新しいFlowインスタンスを作成し、stateを復元
+            # 絶対パスでclient_secrets.jsonファイルを指定
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            default_client_secrets = os.path.join(base_dir, 'client_secrets.json')
+            client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', default_client_secrets)
+            
             flow = Flow.from_client_secrets_file(
-                self.client_secrets_file,
+                client_secrets_file,
                 scopes=self.scopes,
                 redirect_uri=self.redirect_uri
             )

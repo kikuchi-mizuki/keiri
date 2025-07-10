@@ -150,4 +150,10 @@ sessions.db
 
 # OS files
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Process output files
+nohup.out
+
+# Google OAuth credentials
+client_secrets.json 
