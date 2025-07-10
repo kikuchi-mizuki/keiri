@@ -119,7 +119,7 @@ def auth_callback():
                     line_bot_api.push_message(
                         PushMessageRequest(
                             to=state,
-                            messages=[TextMessage(text="✅ Google認証が完了しました！\n\nLINEに戻って続行してください。")]
+                            messages=[TextMessage(text="✅ Google認証が完了しました！\n\n見積書や請求書作成をお手伝いします！")]
                         )
                     )
             except Exception as e:
