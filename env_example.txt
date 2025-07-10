@@ -1,0 +1,15 @@
+# LINE Bot設定
+LINE_CHANNEL_ACCESS_TOKEN=your_line_channel_access_token_here
+LINE_CHANNEL_SECRET=your_line_channel_secret_here
+
+# Google API設定
+GOOGLE_CLIENT_SECRETS_FILE=client_secrets.json
+GOOGLE_REDIRECT_URI=http://localhost:5000/auth/callback
+TEMPLATE_SPREADSHEET_ID=your_template_spreadsheet_id_here
+
+# データベース設定
+DATABASE_URL=sqlite:///sessions.db
+
+# アプリケーション設定
+FLASK_ENV=development
+FLASK_DEBUG=True 
