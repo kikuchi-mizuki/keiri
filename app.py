@@ -358,7 +358,7 @@ def handle_registration(event, session, text):
                     alt_text='メインメニュー',
                     template=ButtonsTemplate(
                         title='✅ 登録完了',
-                        text='登録が完了しました！\n\n見積書や請求書を作成できます。',
+                        text='何をお手伝いしますか？',
                         actions=[
                             PostbackAction(label='見積書を作る', data='create_estimate'),
                             PostbackAction(label='請求書を作る', data='create_invoice'),
