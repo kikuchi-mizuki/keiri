@@ -22,6 +22,18 @@ from services.pdf_generator import PDFGenerator
 # 環境変数の読み込み
 load_dotenv()
 
+# Google OAuth認証情報の設定
+# 環境変数からJSON文字列を取得してファイルとして保存
+client_secrets_env = os.getenv('GOOGLE_CLIENT_SECRETS_JSON')
+if client_secrets_env:
+    try:
+        # JSON文字列をファイルとして保存
+        with open('client_secrets.json', 'w') as f:
+            f.write(client_secrets_env)
+        print("[DEBUG] client_secrets.json created from environment variable")
+    except Exception as e:
+        print(f"[ERROR] Failed to create client_secrets.json: {e}")
+
 app = Flask(__name__)
 
 # LINE Bot設定

@@ -14,10 +14,31 @@ class AuthService:
     """Google OAuth認証管理クラス"""
     
     def __init__(self):
-        # 絶対パスでclient_secrets.jsonファイルを指定
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        default_client_secrets = os.path.join(base_dir, 'client_secrets.json')
-        self.client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', default_client_secrets)
+        # 環境変数からJSON文字列を取得してファイルとして保存
+        client_secrets_env = os.getenv('GOOGLE_CLIENT_SECRETS_JSON')
+        if client_secrets_env:
+            try:
+                # 絶対パスでclient_secrets.jsonファイルを指定
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                client_secrets_path = os.path.join(base_dir, 'client_secrets.json')
+                
+                # JSON文字列をファイルとして保存
+                with open(client_secrets_path, 'w') as f:
+                    f.write(client_secrets_env)
+                print(f"[DEBUG] client_secrets.json created at {client_secrets_path}")
+                
+                self.client_secrets_file = client_secrets_path
+            except Exception as e:
+                print(f"[ERROR] Failed to create client_secrets.json: {e}")
+                # フォールバック: デフォルトパスを使用
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                default_client_secrets = os.path.join(base_dir, 'client_secrets.json')
+                self.client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', default_client_secrets)
+        else:
+            # 絶対パスでclient_secrets.jsonファイルを指定
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            default_client_secrets = os.path.join(base_dir, 'client_secrets.json')
+            self.client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', default_client_secrets)
         
         self.scopes = [
             'https://www.googleapis.com/auth/spreadsheets',
@@ -37,10 +58,26 @@ class AuthService:
     def get_auth_url(self, user_id):
         """認証URLを生成"""
         try:
-            # 絶対パスでclient_secrets.jsonファイルを指定
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            default_client_secrets = os.path.join(base_dir, 'client_secrets.json')
-            client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', default_client_secrets)
+            # 環境変数からJSON文字列を取得してファイルとして保存
+            client_secrets_env = os.getenv('GOOGLE_CLIENT_SECRETS_JSON')
+            if client_secrets_env:
+                try:
+                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    client_secrets_path = os.path.join(base_dir, 'client_secrets.json')
+                    
+                    with open(client_secrets_path, 'w') as f:
+                        f.write(client_secrets_env)
+                    
+                    client_secrets_file = client_secrets_path
+                except Exception as e:
+                    print(f"[ERROR] Failed to create client_secrets.json: {e}")
+                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    default_client_secrets = os.path.join(base_dir, 'client_secrets.json')
+                    client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', default_client_secrets)
+            else:
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                default_client_secrets = os.path.join(base_dir, 'client_secrets.json')
+                client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', default_client_secrets)
             
             flow = Flow.from_client_secrets_file(
                 client_secrets_file,
@@ -66,10 +103,26 @@ class AuthService:
         try:
             print(f"[DEBUG] handle_callback: code={code[:20] if code else 'None'}, state={state}")
             # コールバック時も新しいFlowインスタンスを作成し、stateを復元
-            # 絶対パスでclient_secrets.jsonファイルを指定
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            default_client_secrets = os.path.join(base_dir, 'client_secrets.json')
-            client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', default_client_secrets)
+            # 環境変数からJSON文字列を取得してファイルとして保存
+            client_secrets_env = os.getenv('GOOGLE_CLIENT_SECRETS_JSON')
+            if client_secrets_env:
+                try:
+                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    client_secrets_path = os.path.join(base_dir, 'client_secrets.json')
+                    
+                    with open(client_secrets_path, 'w') as f:
+                        f.write(client_secrets_env)
+                    
+                    client_secrets_file = client_secrets_path
+                except Exception as e:
+                    print(f"[ERROR] Failed to create client_secrets.json: {e}")
+                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    default_client_secrets = os.path.join(base_dir, 'client_secrets.json')
+                    client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', default_client_secrets)
+            else:
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                default_client_secrets = os.path.join(base_dir, 'client_secrets.json')
+                client_secrets_file = os.getenv('GOOGLE_CLIENT_SECRETS_FILE', default_client_secrets)
             
             flow = Flow.from_client_secrets_file(
                 client_secrets_file,
