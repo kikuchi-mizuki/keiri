@@ -97,8 +97,8 @@ class GoogleSheetsService:
             items = data.get('items', [])
             if items:
                 if data.get('document_type') == 'estimate':
-                    # 見積書の場合：A16〜E27（最大12行）
-                    max_items = 12
+                    # 見積書の場合：A16〜E25（最大10行）
+                    max_items = 10
                     for i in range(max_items):
                         row = 16 + i
                         if i < len(items):

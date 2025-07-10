@@ -750,7 +750,7 @@ def handle_document_creation(event, session, text):
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=f"宛名を「{text}」に設定しました。\n\n次に品目を入力してください。\n\n形式：品目名,単価,数量\n例：Webサイト制作,100000,1\n\n最大5件まで入力できます。")]
+                        messages=[TextMessage(text=f"宛名を「{text}」に設定しました。\n\n次に品目を入力してください。\n\n形式：品目名,単価,数量\n例：Webサイト制作,100000,1\n\n最大10件まで入力できます。")]
                     )
                 )
         except Exception as e:
@@ -762,7 +762,7 @@ def handle_document_creation(event, session, text):
         items = session.get('items', [])
         doc_type = session.get('document_type')
         
-        if len(items) >= 5:
+        if len(items) >= 10:
             if doc_type == 'estimate':
                 try:
                     print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
@@ -771,7 +771,7 @@ def handle_document_creation(event, session, text):
                         line_bot_api.reply_message(
                             ReplyMessageRequest(
                                 reply_token=event.reply_token,
-                                messages=[TextMessage(text="品目は最大5件までです。\n\n書類の生成を開始します...")]
+                                messages=[TextMessage(text="品目は最大10件までです。\n\n書類の生成を開始します...")]
                             )
                         )
                 except Exception as e:
@@ -789,7 +789,7 @@ def handle_document_creation(event, session, text):
                         line_bot_api.reply_message(
                             ReplyMessageRequest(
                                 reply_token=event.reply_token,
-                                messages=[TextMessage(text="品目は最大5件までです。\n\n次に支払い期日を入力してください。\n形式：YYYY-MM-DD\n例：2024-01-31")]
+                                messages=[TextMessage(text="品目は最大10件までです。\n\n次に支払い期日を入力してください。\n形式：YYYY-MM-DD\n例：2024-01-31")]
                             )
                         )
                 except Exception as e:
@@ -867,7 +867,7 @@ def handle_document_creation(event, session, text):
                 })
                 session_manager.update_session(user_id, {'items': items})
                 total = sum(item['amount'] for item in items)
-                response_text = f"品目を追加しました：{item_name}\n\n現在の品目数：{len(items)}/5\n合計金額：{total:,}円\n\n続けて品目を入力するか、「完了」と入力してください。"
+                response_text = f"品目を追加しました：{item_name}\n\n現在の品目数：{len(items)}/10\n合計金額：{total:,}円\n\n続けて品目を入力するか、「完了」と入力してください。"
                 print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
                 try:
                     with ApiClient(configuration) as api_client:
