@@ -93,6 +93,11 @@ class DocumentGenerator:
                 spreadsheet_id = self.sheets_service.copy_template(
                     credentials, user_id, document_type
                 )
+                # 不要なタブを削除
+                if document_type == 'estimate':
+                    self.sheets_service.delete_sheet_by_name(credentials, spreadsheet_id, '請求書')
+                elif document_type == 'invoice':
+                    self.sheets_service.delete_sheet_by_name(credentials, spreadsheet_id, '見積書')
                 # document_typeに応じて適切なスプレッドシートIDを保存
                 if document_type == 'estimate':
                     self.session_manager.save_estimate_spreadsheet_id(user_id, spreadsheet_id)

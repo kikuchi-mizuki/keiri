@@ -577,3 +577,23 @@ class GoogleSheetsService:
         except Exception as error:
             logger.error(f"Get latest edited sheet name error: {error}")
             return None 
+
+    def delete_sheet_by_name(self, credentials, spreadsheet_id, sheet_name):
+        """指定したシート名のタブを削除"""
+        service = self._get_service(credentials)
+        try:
+            sheet_id = self.get_sheet_id_by_name(service, spreadsheet_id, sheet_name)
+        except Exception:
+            # シートが存在しない場合は何もしない
+            return False
+        requests = [{
+            'deleteSheet': {
+                'sheetId': sheet_id
+            }
+        }]
+        service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={'requests': requests}
+        ).execute()
+        logger.info(f"Deleted sheet: {sheet_name} (ID: {sheet_id}) from {spreadsheet_id}")
+        return True 
