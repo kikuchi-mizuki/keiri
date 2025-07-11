@@ -1088,7 +1088,7 @@ def generate_document(event, session):
         # 編集リンクとPDFダウンロードリンクを1つのメッセージにまとめて送信
         import os
         pdf_filename = os.path.basename(pdf_path) if pdf_path else None
-        server_url = "http://192.168.0.207:5001"  # 必要に応じて外部公開URLやドメインに変更
+        server_url = os.getenv("SERVER_URL", "http://192.168.0.207:5001")
         
         # 編集されたシートのみのPDFダウンロードリンク
         doc_type = session.get('document_type')
