@@ -301,7 +301,7 @@ def handle_registration(event, session, text):
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text="会社名を登録しました。\n\n次に住所を教えてください。")]
+                        messages=[TextMessage(text="✅ 会社名を「{text}」に設定しました。\n\n次に宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                     )
                 )
         except Exception as e:
@@ -319,7 +319,7 @@ def handle_registration(event, session, text):
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text="住所を登録しました。\n\n次に振込先銀行口座を教えてください。\n（例：○○銀行 ○○支店 普通 1234567）")]
+                        messages=[TextMessage(text="✅ 住所を登録しました。\n\n次に振込先銀行口座を教えてください。\n（例：○○銀行 ○○支店 普通 1234567）")]
                     )
                 )
         except Exception as e:
@@ -340,14 +340,14 @@ def handle_registration(event, session, text):
                     line_bot_api.reply_message(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
-                            messages=[TextMessage(text="銀行口座を登録しました。\n\n最後にGoogle認証を行います。\n以下のリンクからGoogle Driveへのアクセスを許可してください：\n\n" + auth_url)]
+                            messages=[TextMessage(text="✅ 銀行口座を登録しました。\n\n最後にGoogle認証を行います。\n以下のリンクからGoogle Driveへのアクセスを許可してください：\n\n" + auth_url)]
                         )
                     )
                 else:
                     line_bot_api.reply_message(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
-                            messages=[TextMessage(text="銀行口座を登録しました。\n\nGoogle認証URLの生成に失敗しました。")]
+                            messages=[TextMessage(text="✅ 銀行口座を登録しました。\n\nGoogle認証URLの生成に失敗しました。")]
                         )
                     )
         except Exception as e:
@@ -753,7 +753,7 @@ def handle_document_creation(event, session, text):
                     line_bot_api.reply_message(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
-                            messages=[TextMessage(text=f"会社名を「{text}」に設定しました。\n\n次に宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                            messages=[TextMessage(text=f"✅ 会社名を「{text}」に設定しました。\n\n次に宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                         )
                     )
                     print(f"[DEBUG] handle_document_creation: reply_message呼び出し後")
@@ -774,7 +774,7 @@ def handle_document_creation(event, session, text):
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=f"宛名を「{text}」に設定しました。\n\n次に品目を入力してください。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000\n\n最大10件まで入力できます。")]
+                        messages=[TextMessage(text=f"✅ 宛名を「{text}」に設定しました。\n\n次に品目を入力してください。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000\n\n最大10件まで入力できます。")]
                     )
                 )
         except Exception as e:
@@ -870,7 +870,7 @@ def handle_document_creation(event, session, text):
                         line_bot_api.reply_message(
                             ReplyMessageRequest(
                                 reply_token=event.reply_token,
-                                messages=[TextMessage(text="品目の入力が完了しました。\n\n書類の生成を開始します...")]
+                                messages=[TextMessage(text="✅ 品目の入力が完了しました。\n\n書類の生成を開始します...")]
                             )
                         )
                 except Exception as e:
@@ -888,7 +888,7 @@ def handle_document_creation(event, session, text):
                         line_bot_api.reply_message(
                             ReplyMessageRequest(
                                 reply_token=event.reply_token,
-                                messages=[TextMessage(text="品目の入力が完了しました。\n\n次に支払い期日を入力してください。\n形式：YYYY-MM-DD\n例：2024-01-31")]
+                                messages=[TextMessage(text="✅ 品目の入力が完了しました。\n\n次に支払い期日を入力してください。\n形式：YYYY-MM-DD\n例：2024-01-31")]
                             )
                         )
                 except Exception as e:
@@ -977,7 +977,7 @@ def handle_document_creation(event, session, text):
                     line_bot_api.reply_message(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
-                            messages=[TextMessage(text="支払い期日を設定しました。請求書を作成します...")]
+                            messages=[TextMessage(text="✅ 支払い期日を設定しました。請求書を作成します...")]
                         )
                     )
             except Exception as e:
