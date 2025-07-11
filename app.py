@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from flask import Flask, request, abort, redirect, url_for, send_file, after_this_request
 from linebot.v3.messaging import (
-    MessagingApi, Configuration, ApiClient, ReplyMessageRequest, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse
+    MessagingApi, Configuration, ApiClient, ReplyMessageRequest, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage
 )
 from linebot.v3.webhooks.models import MessageEvent, PostbackEvent
 from linebot.v3.webhook import WebhookHandler
@@ -810,6 +810,40 @@ def handle_document_creation(event, session, text):
             summary = f"【会社名】{company}\n【宛名】{client}\n【品目】\n{item_lines}\n【合計金額】{total:,}円"
             return summary
         
+        def build_flex_summary(session):
+            company = session.get('company_name', '')
+            client = session.get('client_name', '')
+            items = session.get('items', [])
+            total = sum(item['amount'] for item in items)
+            item_contents = []
+            for item in items:
+                item_contents.append({
+                    "type": "text",
+                    "text": f"・{item['name']}（{item['quantity']}個 × {item['price']}円 = {item['amount']}円）",
+                    "size": "sm"
+                })
+            flex_json = {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {"type": "text", "text": "入力内容の最終確認", "weight": "bold", "size": "lg", "margin": "md"},
+                        {"type": "separator", "margin": "md"},
+                        {"type": "box", "layout": "vertical", "margin": "md", "contents": [
+                            {"type": "text", "text": f"会社名: {company}", "size": "md", "weight": "bold"},
+                            {"type": "text", "text": f"宛名: {client}", "size": "md"},
+                            {"type": "text", "text": "品目:", "size": "md", "weight": "bold", "margin": "md"},
+                            {"type": "box", "layout": "vertical", "margin": "sm", "contents": item_contents},
+                            {"type": "text", "text": f"合計金額: {total:,}円", "size": "md", "weight": "bold", "color": "#d2691e", "margin": "md"}
+                        ]},
+                        {"type": "separator", "margin": "md"},
+                        {"type": "text", "text": "この内容で書類を生成してよろしいですか？", "size": "md", "margin": "md"}
+                    ]
+                }
+            }
+            return flex_json
+        
         if len(items) >= 10 or text == "完了":
             if not items:
                 try:
@@ -828,7 +862,7 @@ def handle_document_creation(event, session, text):
                     traceback.print_exc()
                 return
             # 最終確認フロー
-            summary = build_summary(session)
+            flex_json = build_flex_summary(session)
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
@@ -836,7 +870,10 @@ def handle_document_creation(event, session, text):
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
                             messages=[
-                                TextMessage(text=f"入力内容の最終確認です。\n\n{summary}\n\nこの内容で書類を生成してよろしいですか？"),
+                                FlexMessage(
+                                    alt_text="入力内容の最終確認",
+                                    contents=flex_json
+                                ),
                                 TemplateMessage(
                                     alt_text="内容確認",
                                     template=ButtonsTemplate(
