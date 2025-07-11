@@ -816,11 +816,19 @@ def handle_document_creation(event, session, text):
             items = session.get('items', [])
             total = sum(item['amount'] for item in items)
             item_contents = []
-            for item in items:
+            if items:
+                for item in items:
+                    item_contents.append({
+                        "type": "text",
+                        "text": f"・{item['name']}（{item['quantity']}個 × {item['price']}円 = {item['amount']}円）",
+                        "size": "sm"
+                    })
+            else:
                 item_contents.append({
                     "type": "text",
-                    "text": f"・{item['name']}（{item['quantity']}個 × {item['price']}円 = {item['amount']}円）",
-                    "size": "sm"
+                    "text": "品目がありません",
+                    "size": "sm",
+                    "color": "#888888"
                 })
             flex_json = {
                 "type": "bubble",
