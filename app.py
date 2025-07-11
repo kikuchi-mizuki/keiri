@@ -178,6 +178,43 @@ def handle_message(event):
     
     # セッション情報の取得
     session = session_manager.get_session(user_id)
+    step = session.get('step') if session else None
+
+    # 最終確認ステップの返答処理
+    if step == 'confirm':
+        if text.strip() == 'はい':
+            session_manager.update_session(user_id, {'step': 'generate'})
+            doc_type = session.get('document_type', 'estimate')
+            doc_label = '見積書' if doc_type == 'estimate' else '請求書'
+            try:
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text=f"{doc_label}を作成中です…")]
+                        )
+                    )
+            except Exception as e:
+                print(f"[ERROR] handle_message: 書類作成中メッセージ送信時に例外発生: {e}")
+            generate_document(event, session)
+            return
+        elif text.strip() == '修正する':
+            session_manager.update_session(user_id, {'step': 'items'})
+            try:
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text="品目の修正を行います。続けて品目を入力してください。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000\n\n完了したら「完了」と入力してください。")]
+                        )
+                    )
+            except Exception as e:
+                print(f"[ERROR] handle_message: reply_message送信時に例外発生: {e}")
+                import traceback
+                traceback.print_exc()
+            return
     
     if not session:
         # 新規ユーザー - 初期登録フロー開始
