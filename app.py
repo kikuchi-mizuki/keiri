@@ -1147,7 +1147,7 @@ def generate_document(event, session):
                 sheet_url_with_tab = f"{sheet_url}#range={encoded_sheet_name}!A1"
         
         # メッセージテキスト生成（全体PDFダウンロードは削除）
-        message_text = f"✅ {'見積書' if doc_type == 'estimate' else '請求書'}を作成しました！\n\n📝 編集リンク（最新シート）：\n{sheet_url_with_tab}\n\n📄 編集シートPDFダウンロード：\n{edited_sheets_pdf_url}"
+        message_text = f"✅ {'見積書' if doc_type == 'estimate' else '請求書'}を作成しました！\n\n📝 編集リンク：\n{sheet_url_with_tab}\n\n📄 PDFダウンロード：\n{edited_sheets_pdf_url}"
         try:
             print(f"[DEBUG] generate_document: reply_token={event.reply_token}, event={event}")
             with ApiClient(configuration) as api_client:
