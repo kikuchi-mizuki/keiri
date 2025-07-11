@@ -189,7 +189,7 @@ def handle_message(event):
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text="LINE見積書・請求書Botへようこそ！\n\nまずは会社情報を登録しましょう。\n会社名（法人・屋号含む）を教えてください。")]
+                        messages=[TextMessage(text="👩‍💼LINE見積書・請求書Botへようこそ！\n\nまずは会社情報を登録しましょう。\n会社名（法人・屋号含む）を教えてください。")]
                     )
                 )
         except Exception as e:
@@ -551,7 +551,7 @@ def show_document_creation_menu(event, doc_type):
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=f"{doc_name}の作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                        messages=[TextMessage(text=f"📄{doc_name}の作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                     )
                 )
         except Exception as e:
