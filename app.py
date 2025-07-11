@@ -887,23 +887,43 @@ def handle_document_creation(event, session, text):
                     import traceback
                     traceback.print_exc()
                 return
-            # 最終確認フロー
-            flex_json = build_rich_text_summary(session)
-            try:
-                with ApiClient(configuration) as api_client:
-                    line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
-                            messages=[TextMessage(text=flex_json)]
+            # --- 修正ここから ---
+            if doc_type == 'estimate':
+                # 見積書は従来通り最終確認
+                flex_json = build_rich_text_summary(session)
+                try:
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text=flex_json)]
+                            )
                         )
-                    )
-            except Exception as e:
-                print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
-                import traceback
-                traceback.print_exc()
-            session_manager.update_session(user_id, {'step': 'confirm'})
-            return
+                except Exception as e:
+                    print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                    import traceback
+                    traceback.print_exc()
+                session_manager.update_session(user_id, {'step': 'confirm'})
+                return
+            else:
+                # 請求書は支払い期日を質問
+                try:
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text="✅ 品目の入力が完了しました。\n\n次に支払い期日を入力してください。\n形式：YYYY-MM-DD\n例：2024-01-31")]
+                            )
+                        )
+                except Exception as e:
+                    print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                    import traceback
+                    traceback.print_exc()
+                session_manager.update_session(user_id, {'step': 'due_date'})
+                return
+        # --- 修正ここまで ---
                 
         if text == "完了":
             print(f"[DEBUG] 完了入力時 items={items}")
