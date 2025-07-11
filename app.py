@@ -315,7 +315,7 @@ def handle_registration(event, session, text):
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text="✅ 会社名を「{text}」に設定しました。\n\n次に宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                        messages=[TextMessage(text=f"✅ 会社名を「{text}」に設定しました。\n\n次に住所を入力してください。\n例：東京都千代田区丸の内1-1-1")]
                     )
                 )
         except Exception as e:
