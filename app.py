@@ -649,6 +649,31 @@ def handle_document_creation(event, session, text):
     step = session.get('step')
     doc_type = session.get('document_type')
 
+    # build_rich_text_summaryを全体スコープで定義
+    def build_rich_text_summary(session):
+        company = session.get('company_name', '')
+        client = session.get('client_name', '')
+        items = session.get('items', [])
+        total = sum(item['amount'] for item in items)
+        item_lines = '\n'.join([
+            f"・{item['name']}（{item['quantity']}個 × {item['price']:,}円 = {item['amount']:,}円）"
+            for item in items
+        ])
+        summary = (
+            "==========\n"
+            "【最終確認】\n"
+            "------------------------------\n"
+            f"■ 会社名\n{company}\n\n"
+            f"■ 宛名\n{client}\n\n"
+            f"■ 品目\n{item_lines if item_lines else '（なし）'}\n\n"
+            "------------------------------\n"
+            f"■ 合計金額\n{total:,}円\n"
+            "==========\n\n"
+            "この内容で書類を生成してよろしいですか？\n"
+            "（「はい」または「修正する」と入力してください）"
+        )
+        return summary
+
     # registration_completeがTrueでもトークンが無い場合は認証フローに戻す
     if session.get('registration_complete') and not auth_service.is_authenticated(user_id):
         print(f"[ERROR] registration_completeはTrueだがGoogle認証トークンが無い。認証フローに戻します。")
@@ -844,30 +869,6 @@ def handle_document_creation(event, session, text):
             total = sum(item['amount'] for item in items)
             item_lines = '\n'.join([f"・{item['name']}（{item['quantity']}個 × {item['price']}円 = {item['amount']}円）" for item in items])
             summary = f"【会社名】{company}\n【宛名】{client}\n【品目】\n{item_lines}\n【合計金額】{total:,}円"
-            return summary
-        
-        def build_rich_text_summary(session):
-            company = session.get('company_name', '')
-            client = session.get('client_name', '')
-            items = session.get('items', [])
-            total = sum(item['amount'] for item in items)
-            item_lines = '\n'.join([
-                f"・{item['name']}（{item['quantity']}個 × {item['price']:,}円 = {item['amount']:,}円）"
-                for item in items
-            ])
-            summary = (
-                "==========\n"
-                "【最終確認】\n"
-                "------------------------------\n"
-                f"■ 会社名\n{company}\n\n"
-                f"■ 宛名\n{client}\n\n"
-                f"■ 品目\n{item_lines if item_lines else '（なし）'}\n\n"
-                "------------------------------\n"
-                f"■ 合計金額\n{total:,}円\n"
-                "==========\n\n"
-                "この内容で書類を生成してよろしいですか？\n"
-                "（「はい」または「修正する」と入力してください）"
-            )
             return summary
         
         if len(items) >= 10 or text == "完了":
