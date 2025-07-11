@@ -72,8 +72,8 @@ class GoogleSheetsService:
             else:
                 # 請求書の場合
                 basic_updates = [
-                    ('E8', data.get('company_name', '')),  # 会社名
-                    ('E10', data.get('address', '')),    # 住所
+                    ('F8', data.get('company_name', '')),  # 会社名（F8）
+                    ('F10', data.get('address', '')),    # 住所（F10）
                     ('A7', data.get('client_name', '')),  # 宛名
                     ('A16', data.get('transaction_date', '')),  # 取引日
                     ('B16', data.get('item_name', '')),  # 品名
