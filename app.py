@@ -595,7 +595,7 @@ def show_document_creation_menu(event, doc_type):
                     line_bot_api.reply_message(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
-                            messages=[TextMessage(text="請求書の作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                            messages=[TextMessage(text=f"📄{doc_name}の作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                         )
                     )
             except Exception as e:
@@ -972,7 +972,7 @@ def handle_document_creation(event, session, text):
                 })
                 session_manager.update_session(user_id, {'items': items})
                 total = sum(item['amount'] for item in items)
-                response_text = f"品目を追加しました：{item_name}\n\n現在の品目数：{len(items)}/10\n合計金額：{total:,}円\n\n続けて品目を入力するか、「完了」と入力してください。"
+                response_text = f"✅ 品目を追加しました：{item_name}\n\n現在の品目数：{len(items)}/10\n合計金額：{total:,}円\n\n続けて品目を入力するか、「完了」と入力してください。"
                 print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
                 try:
                     with ApiClient(configuration) as api_client:
