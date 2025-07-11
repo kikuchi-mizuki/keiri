@@ -856,7 +856,7 @@ def handle_document_creation(event, session, text):
                 for item in items
             ])
             summary = (
-                "======================\n"
+                "==========\n"
                 "【最終確認】\n"
                 "------------------------------\n"
                 f"■ 会社名\n{company}\n\n"
@@ -864,7 +864,7 @@ def handle_document_creation(event, session, text):
                 f"■ 品目\n{item_lines if item_lines else '（なし）'}\n\n"
                 "------------------------------\n"
                 f"■ 合計金額\n{total:,}円\n"
-                "======================\n\n"
+                "==========\n\n"
                 "この内容で書類を生成してよろしいですか？\n"
                 "（「はい」または「修正する」と入力してください）"
             )
