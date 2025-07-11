@@ -655,6 +655,7 @@ def handle_document_creation(event, session, text):
         client = session.get('client_name', '')
         items = session.get('items', [])
         total = sum(item['amount'] for item in items)
+        due_date = session.get('due_date', '')
         item_lines = '\n'.join([
             f"・{item['name']}（{item['quantity']}個 × {item['price']:,}円 = {item['amount']:,}円）"
             for item in items
@@ -666,6 +667,7 @@ def handle_document_creation(event, session, text):
             f"■ 会社名\n{company}\n\n"
             f"■ 宛名\n{client}\n\n"
             f"■ 品目\n{item_lines if item_lines else '（なし）'}\n\n"
+            + (f"■ 支払い期日\n{due_date}\n\n" if due_date else "")
             "------------------------------\n"
             f"■ 合計金額\n{total:,}円\n"
             "==========\n\n"
