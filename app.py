@@ -607,8 +607,10 @@ def show_document_creation_menu(event, doc_type):
                 print(f"[DEBUG] show_document_creation_menu: reply_token={event.reply_token}, event={event}")
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    text_message = TextMessage(text=f"{doc_name}の作成を開始します。\n\n使用する請求書シートを選択してください。")
-                    text_message.quickReply = quick_reply
+                    text_message = TextMessage(
+                        text=f"{doc_name}の作成を開始します。\n\n使用する請求書シートを選択してください。",
+                        quick_reply=quick_reply
+                    )
                     line_bot_api.reply_message(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
