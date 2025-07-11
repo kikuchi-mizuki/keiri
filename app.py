@@ -333,7 +333,7 @@ def handle_registration(event, session, text):
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text="✅ 住所を登録しました。\n\n次に振込先銀行口座を教えてください。\n（例：○○銀行 ○○支店 普通 1234567）")]
+                        messages=[TextMessage(text=f"✅ 住所を「{text}」に設定しました。\n\n次に振込先銀行口座を教えてください。\n（例：○○銀行 ○○支店 普通 1234567）")]
                     )
                 )
         except Exception as e:
