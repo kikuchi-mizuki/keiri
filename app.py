@@ -244,6 +244,20 @@ def handle_postback(event):
     elif data == 'confirm_generate':
         session = session_manager.get_session(user_id)
         session_manager.update_session(user_id, {'step': 'generate'})
+        # 進行中メッセージをreplyで送信
+        doc_type = session.get('document_type', 'estimate')
+        doc_label = '見積書' if doc_type == 'estimate' else '請求書'
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=f"{doc_label}を作成中です…")]
+                    )
+                )
+        except Exception as e:
+            print(f"[ERROR] handle_postback: 書類作成中メッセージ送信時に例外発生: {e}")
         generate_document(event, session)
         return
     elif data == 'edit_items':
