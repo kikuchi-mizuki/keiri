@@ -183,6 +183,12 @@ def handle_message(event):
     # v3ではevent.messageはTextMessageContent型
     text = event.message.text if hasattr(event.message, 'text') else ''
 
+    # キャンセル対応
+    if text.strip() == "キャンセル":
+        session_manager.update_session(user_id, {'state': 'menu', 'step': None})
+        show_main_menu(event)
+        return
+
     logger.info(f"Received message from {user_id}: {text}")
     print(f"[DEBUG] handle_message: reply_token={event.reply_token}, event={event}")
     
@@ -658,6 +664,11 @@ def show_document_creation_menu(event, doc_type):
 def handle_document_creation(event, session, text):
     print("[DEBUG] handle_document_creation: 開始")
     user_id = event.source.user_id
+    # キャンセル対応
+    if text.strip() == "キャンセル":
+        session_manager.update_session(user_id, {'state': 'menu', 'step': None})
+        show_main_menu(event)
+        return
     step = session.get('step')
     doc_type = session.get('document_type')
 
