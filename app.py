@@ -662,17 +662,17 @@ def handle_document_creation(event, session, text):
         ])
         summary = (
             "==========\n"
-            "【最終確認】\n"
-            "------------------------------\n"
-            f"■ 会社名\n{company}\n\n"
-            f"■ 宛名\n{client}\n\n"
-            f"■ 品目\n{item_lines if item_lines else '（なし）'}\n\n"
+            + "【最終確認】\n"
+            + "------------------------------\n"
+            + f"■ 会社名\n{company}\n\n"
+            + f"■ 宛名\n{client}\n\n"
+            + f"■ 品目\n{item_lines if item_lines else '（なし）'}\n\n"
             + (f"■ 支払い期日\n{due_date}\n\n" if due_date else "")
-            "------------------------------\n"
-            f"■ 合計金額\n{total:,}円\n"
-            "==========\n\n"
-            "この内容で書類を生成してよろしいですか？\n"
-            "（「はい」または「修正する」と入力してください）"
+            + "------------------------------\n"
+            + f"■ 合計金額\n{total:,}円\n"
+            + "==========\n\n"
+            + "この内容で書類を生成してよろしいですか？\n"
+            + "（「はい」または「修正する」と入力してください）"
         )
         return summary
 
