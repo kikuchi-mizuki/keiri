@@ -1052,25 +1052,27 @@ def handle_document_creation(event, session, text):
             session_manager.update_session(user_id, {
                 'due_date': text
             })
+            # --- ここから修正 ---
+            # 支払い期日入力後、最終確認メッセージを表示
+            flex_json = build_rich_text_summary(session_manager.get_session(user_id))
             try:
-                print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.reply_message(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
-                            messages=[TextMessage(text="✅ 支払い期日を設定しました。請求書を作成します...")]
+                            messages=[TextMessage(text=flex_json)]
                         )
                     )
             except Exception as e:
                 print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
-            # 期日入力後にすぐ書類生成へ
-            generate_document(event, session_manager.get_session(user_id))
+            session_manager.update_session(user_id, {'step': 'confirm'})
+            return
+            # --- ここまで修正 ---
         except ValueError:
             try:
-                print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.reply_message(
