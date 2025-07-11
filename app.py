@@ -140,8 +140,7 @@ def auth_callback():
             return "認証が完了しました。LINEに戻って続行してください。"
         else:
             print(f"[DEBUG] auth_callback: 認証失敗 user_id={state}")
-            
-            # 認証失敗時もプッシュメッセージで通知
+            # 認証失敗時は失敗メッセージのみ送信（メインメニューは送らない）
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
@@ -153,7 +152,6 @@ def auth_callback():
                     )
             except Exception as e:
                 print(f"[WARNING] Failed to send push message: {e}")
-            
             return "認証に失敗しました。再度お試しください。"
     except Exception as e:
         logger.error(f"Auth callback error: {e}")
