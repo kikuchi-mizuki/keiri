@@ -12,6 +12,7 @@ from linebot.v3.exceptions import InvalidSignatureError
 from dotenv import load_dotenv
 import traceback
 import tempfile
+import re
 
 from services.session_manager import SessionManager
 from services.google_sheets_service import GoogleSheetsService
@@ -898,7 +899,8 @@ def handle_document_creation(event, session, text):
                 return
                 
         try:
-            parts = text.split(',')
+            normalized_text = normalize_item_input(text)
+            parts = normalized_text.split(',')
             if len(parts) == 3:
                 item_name = parts[0].strip()
                 quantity = int(parts[1].strip())
@@ -1102,6 +1104,17 @@ def generate_document(event, session):
                 )
         except Exception as push_e:
             print(f"[ERROR] generate_document: push_message送信時に例外発生: {push_e}")
+
+def normalize_item_input(text):
+    # 全角カンマ→半角カンマ
+    text = text.replace('、', ',')
+    # 全角数字→半角数字
+    text = text.translate(str.maketrans('０１２３４５６７８９', '0123456789'))
+    # 全角スペース→半角スペース
+    text = text.replace('　', ' ')
+    # 区切り文字（カンマ、スペース、タブ）をカンマに統一
+    text = re.sub(r'[\s,]+', ',', text.strip())
+    return text
 
 @app.route('/download/pdf/<filename>')
 def download_pdf(filename):
