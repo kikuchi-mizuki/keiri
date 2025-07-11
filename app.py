@@ -810,47 +810,29 @@ def handle_document_creation(event, session, text):
             summary = f"【会社名】{company}\n【宛名】{client}\n【品目】\n{item_lines}\n【合計金額】{total:,}円"
             return summary
         
-        def build_flex_summary(session):
+        def build_rich_text_summary(session):
             company = session.get('company_name', '')
             client = session.get('client_name', '')
             items = session.get('items', [])
             total = sum(item['amount'] for item in items)
-            item_contents = []
-            if items:
-                for item in items:
-                    item_contents.append({
-                        "type": "text",
-                        "text": f"・{item['name']}（{item['quantity']}個 × {item['price']}円 = {item['amount']}円）",
-                        "size": "sm"
-                    })
-            else:
-                item_contents.append({
-                    "type": "text",
-                    "text": "品目がありません",
-                    "size": "sm",
-                    "color": "#888888"
-                })
-            flex_json = {
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "text", "text": "入力内容の最終確認", "weight": "bold", "size": "lg", "margin": "md"},
-                        {"type": "separator", "margin": "md"},
-                        {"type": "box", "layout": "vertical", "margin": "md", "contents": [
-                            {"type": "text", "text": f"会社名: {company}", "size": "md", "weight": "bold"},
-                            {"type": "text", "text": f"宛名: {client}", "size": "md"},
-                            {"type": "text", "text": "品目:", "size": "md", "weight": "bold", "margin": "md"},
-                            {"type": "box", "layout": "vertical", "margin": "sm", "contents": item_contents},
-                            {"type": "text", "text": f"合計金額: {total:,}円", "size": "md", "weight": "bold", "color": "#d2691e", "margin": "md"}
-                        ]},
-                        {"type": "separator", "margin": "md"},
-                        {"type": "text", "text": "この内容で書類を生成してよろしいですか？", "size": "md", "margin": "md"}
-                    ]
-                }
-            }
-            return flex_json
+            item_lines = '\n'.join([
+                f"・{item['name']}（{item['quantity']}個 × {item['price']:,}円 = {item['amount']:,}円）"
+                for item in items
+            ])
+            summary = (
+                "==============================\n"
+                "【最終確認】\n"
+                "------------------------------\n"
+                f"■ 会社名\n{company}\n\n"
+                f"■ 宛名\n{client}\n\n"
+                f"■ 品目\n{item_lines if item_lines else '（なし）'}\n\n"
+                "------------------------------\n"
+                f"■ 合計金額\n{total:,}円\n"
+                "==============================\n\n"
+                "この内容で書類を生成してよろしいですか？\n"
+                "（「はい」または「修正する」と入力してください）"
+            )
+            return summary
         
         if len(items) >= 10 or text == "完了":
             if not items:
@@ -870,30 +852,14 @@ def handle_document_creation(event, session, text):
                     traceback.print_exc()
                 return
             # 最終確認フロー
-            flex_json = build_flex_summary(session)
+            flex_json = build_rich_text_summary(session)
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.reply_message(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
-                            messages=[
-                                FlexMessage(
-                                    alt_text="入力内容の最終確認",
-                                    contents=flex_json
-                                ),
-                                TemplateMessage(
-                                    alt_text="内容確認",
-                                    template=ButtonsTemplate(
-                                        title="内容確認",
-                                        text="この内容で書類を生成しますか？",
-                                        actions=[
-                                            PostbackAction(label="はい", data="confirm_generate"),
-                                            PostbackAction(label="修正する", data="edit_items")
-                                        ]
-                                    )
-                                )
-                            ]
+                            messages=[TextMessage(text=flex_json)]
                         )
                     )
             except Exception as e:
@@ -904,6 +870,7 @@ def handle_document_creation(event, session, text):
             return
                 
         if text == "完了":
+            print(f"[DEBUG] 完了入力時 items={items}")
             if not items:
                 try:
                     print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
