@@ -112,21 +112,31 @@ def auth_callback():
         
         if auth_service.handle_callback(code, state):
             print(f"[DEBUG] auth_callback: 認証成功 user_id={state}")
-            
-            # 認証完了後にLINEにプッシュメッセージで通知
+            # 認証完了後にLINEにプッシュメッセージでメインメニューを表示
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
+                    buttons_template = TemplateMessage(
+                        altText='メインメニュー',
+                        template=ButtonsTemplate(
+                            title='✅ 登録完了',
+                            text='何をお手伝いしますか？',
+                            actions=[
+                                PostbackAction(label='見積書を作る', data='create_estimate'),
+                                PostbackAction(label='請求書を作る', data='create_invoice'),
+                                PostbackAction(label='会社情報を編集', data='edit_company_info')
+                            ]
+                        )
+                    )
                     line_bot_api.push_message(
                         PushMessageRequest(
                             to=state,
-                            messages=[TextMessage(text="✅ Google認証が完了しました！\n\n見積書や請求書作成をお手伝いします！")]
+                            messages=[buttons_template]
                         )
                     )
             except Exception as e:
                 print(f"[WARNING] Failed to send push message: {e}")
                 # プッシュメッセージ送信に失敗しても認証自体は成功しているので続行
-            
             return "認証が完了しました。LINEに戻って続行してください。"
         else:
             print(f"[DEBUG] auth_callback: 認証失敗 user_id={state}")
@@ -430,7 +440,7 @@ def handle_registration(event, session, text):
                 })
                 # 登録完了メッセージとメインメニューを一緒に送信
                 buttons_template = TemplateMessage(
-                    alt_text='メインメニュー',
+                    altText='メインメニュー',
                     template=ButtonsTemplate(
                         title='✅ 登録完了',
                         text='何をお手伝いしますか？',
@@ -540,7 +550,7 @@ def show_main_menu(event):
     """メインメニューの表示"""
     print("[DEBUG] show_main_menu: 開始")
     buttons_template = TemplateMessage(
-        alt_text='メインメニュー',
+        altText='メインメニュー',
         template=ButtonsTemplate(
             title='LINE見積書・請求書Bot',
             text='何をお手伝いしますか？',
