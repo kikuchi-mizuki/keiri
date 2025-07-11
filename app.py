@@ -903,8 +903,8 @@ def handle_document_creation(event, session, text):
             parts = normalized_text.split(',')
             if len(parts) == 3:
                 item_name = parts[0].strip()
-                quantity = int(parts[1].strip())
-                price = int(parts[2].strip())
+                quantity = kanji_num_to_int(parts[1].strip())
+                price = kanji_num_to_int(parts[2].strip())
                 items.append({
                     'name': item_name,
                     'price': price,
@@ -1115,6 +1115,26 @@ def normalize_item_input(text):
     # 区切り文字（カンマ、スペース、タブ）をカンマに統一
     text = re.sub(r'[\s,]+', ',', text.strip())
     return text
+
+def kanji_num_to_int(s):
+    s = s.strip()
+    # 万・千の単位を数値化
+    if s.endswith('万'):
+        try:
+            return int(float(s[:-1]) * 10000)
+        except ValueError:
+            pass
+    if s.endswith('千'):
+        try:
+            return int(float(s[:-1]) * 1000)
+        except ValueError:
+            pass
+    # カンマ区切りや全角数字も考慮
+    s = s.replace(',', '')
+    try:
+        return int(s)
+    except ValueError:
+        return s
 
 @app.route('/download/pdf/<filename>')
 def download_pdf(filename):
