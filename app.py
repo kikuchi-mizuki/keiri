@@ -112,7 +112,19 @@ def auth_callback():
         
         if auth_service.handle_callback(code, state):
             print(f"[DEBUG] auth_callback: 認証成功 user_id={state}")
-            # 認証完了後はメッセージ送信せず、LINE側で次の入力を促す
+            # 認証完了後に会社情報入力の案内を送信
+            try:
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.push_message(
+                        PushMessageRequest(
+                            to=state,
+                            messages=[TextMessage(text="✅ Google認証が完了しました！\n\n次に会社情報を登録しましょう。\n会社名（法人・屋号含む）を教えてください。")]
+                        )
+                    )
+            except Exception as e:
+                print(f"[WARNING] Failed to send push message: {e}")
+                # プッシュメッセージ送信に失敗しても認証自体は成功しているので続行
             return "認証が完了しました。LINEに戻って続行してください。"
         else:
             print(f"[DEBUG] auth_callback: 認証失敗 user_id={state}")
@@ -387,18 +399,8 @@ def handle_registration(event, session, text):
             session_manager.update_session(user_id, {
                 'step': 'company_name'
             })
-            try:
-                print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
-                with ApiClient(configuration) as api_client:
-                    line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
-                            messages=[TextMessage(text="✅ Google認証が完了しました！\n\n次に会社情報を登録しましょう。\n会社名（法人・屋号含む）を教えてください。")]
-                        )
-                    )
-            except Exception as e:
-                print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
+            # ここでメッセージ送信はしない（auth_callbackでpush済み）
+            return
         else:
             print(f"[DEBUG] handle_registration: 認証未完了 user_id={user_id}")
             auth_url = auth_service.get_auth_url(user_id)
@@ -427,6 +429,7 @@ def handle_registration(event, session, text):
                 print(f"[ERROR] handle_registration: 認証URL送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
+        return
     
     elif step == 'company_name':
         session_manager.update_session(user_id, {
