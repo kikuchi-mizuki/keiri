@@ -182,6 +182,8 @@ def handle_message(event):
     session = session_manager.get_session(user_id)
     step = session.get('step') if session else None
 
+    print(f"[DEBUG] handle_message: user_id={user_id}, text={text}, session={session}, step={step}")
+
     # 最終確認ステップの返答処理
     if step == 'confirm':
         if text.strip() == 'はい':
@@ -373,13 +375,19 @@ def handle_existing_user(event, session, text):
     user_id = event.source.user_id
     state = session.get('state', 'menu')
     
+    print(f"[DEBUG] handle_existing_user: user_id={user_id}, state={state}, text={text}, session={session}")
+    
     if state == 'registration':
+        print(f"[DEBUG] handle_existing_user: registration状態でhandle_registrationを呼び出し")
         handle_registration(event, session, text)
     elif state == 'menu':
+        print(f"[DEBUG] handle_existing_user: menu状態でhandle_menuを呼び出し")
         handle_menu(event, session, text)
     elif state == 'document_creation':
+        print(f"[DEBUG] handle_existing_user: document_creation状態でhandle_document_creationを呼び出し")
         handle_document_creation(event, session, text)
     else:
+        print(f"[DEBUG] handle_existing_user: 不明な状態({state})のためメニューに戻す")
         # 不明な状態の場合はメニューに戻す
         session_manager.update_session(user_id, {'state': 'menu'})
         show_main_menu(event)
