@@ -1206,6 +1206,12 @@ def handle_document_creation(event, session, text):
 
     # 以降のnotes, email, phone, representative, business_numberのステップはスキップ（請求書の場合）
 
+    # generateステップで書類生成を必ず呼び出す
+    if step == 'generate':
+        print("[DEBUG] handle_document_creation: generate step - 書類生成処理を呼び出します")
+        generate_document(event, session)
+        return
+
 def generate_document(event, session):
     """書類の生成と送信"""
     print("[DEBUG] generate_document: 開始")
