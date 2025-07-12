@@ -112,19 +112,7 @@ def auth_callback():
         
         if auth_service.handle_callback(code, state):
             print(f"[DEBUG] auth_callback: 認証成功 user_id={state}")
-            # 認証完了後に会社情報入力の案内を送信
-            try:
-                with ApiClient(configuration) as api_client:
-                    line_bot_api = MessagingApi(api_client)
-                    line_bot_api.push_message(
-                        PushMessageRequest(
-                            to=state,
-                            messages=[TextMessage(text="✅ Google認証が完了しました！\n\n次に会社情報を登録しましょう。\n会社名（法人・屋号含む）を教えてください。")]
-                        )
-                    )
-            except Exception as e:
-                print(f"[WARNING] Failed to send push message: {e}")
-                # プッシュメッセージ送信に失敗しても認証自体は成功しているので続行
+            # 認証完了後はメッセージ送信せず、LINE側で次の入力を促す
             return "認証が完了しました。LINEに戻って続行してください。"
         else:
             print(f"[DEBUG] auth_callback: 認証失敗 user_id={state}")
