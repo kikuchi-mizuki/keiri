@@ -675,82 +675,25 @@ def show_document_creation_menu(event, doc_type):
     session = session_manager.get_session(user_id)
     print(f"[DEBUG] show_document_creation_menu: user_id={user_id}, session={session}")
 
-    if doc_type == 'estimate':
-        # 見積書の場合は宛名から開始
-        session_manager.update_session(user_id, {
-            'state': 'document_creation',
-            'document_type': doc_type,
-            'step': 'client_name',
-            'items': []
-        })
-        try:
-            print(f"[DEBUG] show_document_creation_menu: reply_token={event.reply_token}, event={event}")
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[TextMessage(text=f"📄{doc_name}の作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
-                    )
+    # 見積書・請求書ともに新規作成フローに統一
+    session_manager.update_session(user_id, {
+        'state': 'document_creation',
+        'document_type': doc_type,
+        'step': 'client_name',
+        'items': []
+    })
+    try:
+        print(f"[DEBUG] show_document_creation_menu: reply_token={event.reply_token}, event={event}")
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=f"📄{doc_name}の作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                 )
-        except Exception as e:
-            print(f"[ERROR] show_document_creation_menu: reply_message送信時に例外発生: {e}")
-    else:
-        # 請求書の場合はシート選択から開始
-        credentials = auth_service.get_credentials(user_id)
-        invoice_sheets = google_sheets_service.list_invoice_sheets(credentials, max_results=5)
-        if invoice_sheets:
-            quick_reply_items = [
-                QuickReplyItem(
-                    action=MessageAction(
-                        label=sheet['name'][:19] + '…' if len(sheet['name']) > 20 else sheet['name'],
-                        text=f"シート選択:{sheet['id']}"
-                    )
-                )
-                for sheet in invoice_sheets
-            ]
-            quick_reply = QuickReply(items=quick_reply_items)
-            try:
-                print(f"[DEBUG] show_document_creation_menu: reply_token={event.reply_token}, event={event}")
-                with ApiClient(configuration) as api_client:
-                    line_bot_api = MessagingApi(api_client)
-                    text_message = TextMessage(
-                        text=f"{doc_name}の作成を開始します。\n\n使用する請求書シートを選択してください。",
-                        quick_reply=quick_reply
-                    )
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
-                            messages=[text_message]
-                        )
-                    )
-            except Exception as e:
-                print(f"[ERROR] show_document_creation_menu: reply_message送信時に例外発生: {e}")
-            session_manager.update_session(user_id, {
-                'state': 'document_creation',
-                'document_type': doc_type,
-                'step': 'select_invoice_sheet',
-                'items': []
-            })
-        else:
-            try:
-                print(f"[DEBUG] show_document_creation_menu: reply_token={event.reply_token}, event={event}")
-                with ApiClient(configuration) as api_client:
-                    line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
-                            messages=[TextMessage(text=f"📄{doc_name}の作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
-                        )
-                    )
-            except Exception as e:
-                print(f"[ERROR] show_document_creation_menu: reply_message送信時に例外発生: {e}")
-            session_manager.update_session(user_id, {
-                'state': 'document_creation',
-                'document_type': doc_type,
-                'step': 'client_name',
-                'items': []
-            })
+            )
+    except Exception as e:
+        print(f"[ERROR] show_document_creation_menu: reply_message送信時に例外発生: {e}")
 
 def handle_document_creation(event, session, text):
     print("[DEBUG] handle_document_creation: 開始")
