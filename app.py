@@ -432,6 +432,7 @@ def handle_registration(event, session, text):
         return
     
     elif step == 'company_name':
+        print(f"[DEBUG] handle_registration: step=company_name, text={text}, session={session}")
         session_manager.update_session(user_id, {
             'company_name': text,
             'step': 'address'
@@ -450,6 +451,7 @@ def handle_registration(event, session, text):
             print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
     
     elif step == 'address':
+        print(f"[DEBUG] handle_registration: step=address, text={text}, session={session}")
         session_manager.update_session(user_id, {
             'address': text,
             'step': 'bank_account'
@@ -468,6 +470,7 @@ def handle_registration(event, session, text):
             print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
     
     elif step == 'bank_account':
+        print(f"[DEBUG] handle_registration: step=bank_account, text={text}, session={session}")
         # 銀行口座入力完了後、ユーザー情報を永続化して登録完了
         session_manager.update_session(user_id, {
             'bank_account': text
