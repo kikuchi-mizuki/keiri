@@ -183,6 +183,13 @@ def handle_message(event):
     step = session.get('step') if session else None
 
     print(f"[DEBUG] handle_message: user_id={user_id}, text={text}, session={session}, step={step}")
+    
+    # セッションの詳細情報を出力
+    if session:
+        print(f"[DEBUG] handle_message: session.state={session.get('state')}, session.step={session.get('step')}")
+        print(f"[DEBUG] handle_message: session.registration_complete={session.get('registration_complete')}")
+    else:
+        print(f"[DEBUG] handle_message: セッションが存在しません")
 
     # 最終確認ステップの返答処理
     if step == 'confirm':
@@ -407,6 +414,10 @@ def handle_registration(event, session, text):
             session_manager.update_session(user_id, {
                 'step': 'company_name'
             })
+            # セッション更新後の状態を確認
+            updated_session = session_manager.get_session(user_id)
+            print(f"[DEBUG] handle_registration: セッション更新後: {updated_session}")
+            print(f"[DEBUG] handle_registration: 次のステップ: {updated_session.get('step') if updated_session else 'None'}")
             # ここでメッセージ送信はしない（auth_callbackでpush済み）
             # returnを削除して、次のメッセージ処理でcompany_nameステップに入るようにする
         else:
