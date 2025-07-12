@@ -83,6 +83,8 @@ def callback():
     print("=== LINE CALLBACK ===")
     print("Signature:", signature)
     print("Body:", body)
+    print(f"[DEBUG] callback: body length={len(body)}")
+    print(f"[DEBUG] callback: body preview={body[:200]}...")
     
     try:
         print("[DEBUG] callback: handler.handle呼び出し前")
@@ -165,9 +167,12 @@ def auth_callback():
 def handle_message(event):
     """テキストメッセージの処理"""
     print("[DEBUG] handle_message: 開始")
+    print(f"[DEBUG] handle_message: イベントタイプ: {type(event)}")
+    print(f"[DEBUG] handle_message: イベント内容: {event}")
     user_id = event.source.user_id
     # v3ではevent.messageはTextMessageContent型
     text = event.message.text if hasattr(event.message, 'text') else ''
+    print(f"[DEBUG] handle_message: メッセージテキスト: {text}")
 
     # キャンセル対応
     if text.strip() == "キャンセル":
