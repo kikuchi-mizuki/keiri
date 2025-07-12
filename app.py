@@ -477,15 +477,15 @@ def handle_registration(event, session, text):
             print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
                         messages=[TextMessage(text=f"✅ 会社名を「{text}」に設定しました。\n\n次に住所を入力してください。\n例：東京都千代田区丸の内1-1-1")]
                     )
                 )
-                print(f"[DEBUG] handle_registration: 住所入力メッセージ送信完了")
+                print(f"[DEBUG] handle_registration: 住所入力メッセージ送信完了 (push_message)")
         except Exception as e:
-            print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
+            print(f"[ERROR] handle_registration: push_message送信時に例外発生: {e}")
             import traceback
             traceback.print_exc()
     
