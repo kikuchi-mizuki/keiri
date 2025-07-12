@@ -408,7 +408,7 @@ def handle_registration(event, session, text):
                 'step': 'company_name'
             })
             # ここでメッセージ送信はしない（auth_callbackでpush済み）
-            return
+            # returnを削除して、次のメッセージ処理でcompany_nameステップに入るようにする
         else:
             print(f"[DEBUG] handle_registration: 認証未完了 user_id={user_id}")
             auth_url = auth_service.get_auth_url(user_id)
@@ -437,7 +437,7 @@ def handle_registration(event, session, text):
                 print(f"[ERROR] handle_registration: 認証URL送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
-        return
+            return
     
     elif step == 'company_name':
         print(f"[DEBUG] handle_registration: step=company_name, text={text}, session={session}")
