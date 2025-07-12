@@ -613,7 +613,12 @@ def show_document_creation_menu(event, doc_type):
         invoice_sheets = google_sheets_service.list_invoice_sheets(credentials, max_results=5)
         if invoice_sheets:
             quick_reply_items = [
-                QuickReplyItem(action=MessageAction(label=sheet['name'], text=f"シート選択:{sheet['id']}"))
+                QuickReplyItem(
+                    action=MessageAction(
+                        label=sheet['name'][:19] + '…' if len(sheet['name']) > 20 else sheet['name'],
+                        text=f"シート選択:{sheet['id']}"
+                    )
+                )
                 for sheet in invoice_sheets
             ]
             quick_reply = QuickReply(items=quick_reply_items)
