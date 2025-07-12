@@ -188,6 +188,10 @@ def handle_message(event):
     if session:
         print(f"[DEBUG] handle_message: session.state={session.get('state')}, session.step={session.get('step')}")
         print(f"[DEBUG] handle_message: session.registration_complete={session.get('registration_complete')}")
+        
+        # 会社名入力時の詳細ログ
+        if session.get('state') == 'registration' and session.get('step') == 'company_name':
+            print(f"[DEBUG] handle_message: 会社名入力ステップ検出 - text={text}")
     else:
         print(f"[DEBUG] handle_message: セッションが存在しません")
 
@@ -452,10 +456,18 @@ def handle_registration(event, session, text):
     
     elif step == 'company_name':
         print(f"[DEBUG] handle_registration: step=company_name, text={text}, session={session}")
+        print(f"[DEBUG] handle_registration: 会社名保存前のセッション: {session}")
+        
         session_manager.update_session(user_id, {
             'company_name': text,
             'step': 'address'
         })
+        
+        # セッション更新後の状態を確認
+        updated_session = session_manager.get_session(user_id)
+        print(f"[DEBUG] handle_registration: 会社名保存後のセッション: {updated_session}")
+        print(f"[DEBUG] handle_registration: 次のステップ: {updated_session.get('step') if updated_session else 'None'}")
+        
         try:
             print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
             with ApiClient(configuration) as api_client:
@@ -466,8 +478,11 @@ def handle_registration(event, session, text):
                         messages=[TextMessage(text=f"✅ 会社名を「{text}」に設定しました。\n\n次に住所を入力してください。\n例：東京都千代田区丸の内1-1-1")]
                     )
                 )
+                print(f"[DEBUG] handle_registration: 住所入力メッセージ送信完了")
         except Exception as e:
             print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
+            import traceback
+            traceback.print_exc()
     
     elif step == 'address':
         print(f"[DEBUG] handle_registration: step=address, text={text}, session={session}")
