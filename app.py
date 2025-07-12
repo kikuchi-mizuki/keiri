@@ -427,8 +427,13 @@ def handle_registration(event, session, text):
             updated_session = session_manager.get_session(user_id)
             print(f"[DEBUG] handle_registration: セッション更新後: {updated_session}")
             print(f"[DEBUG] handle_registration: 次のステップ: {updated_session.get('step') if updated_session else 'None'}")
-            # ここでメッセージ送信はしない（auth_callbackでpush済み）
-            # returnを削除して、次のメッセージ処理でcompany_nameステップに入るようにする
+            # ここで、同じメッセージ内容でcompany_nameステップを即時処理
+            # ただし、textが空でなければ会社名として扱う
+            if text.strip():
+                print(f"[DEBUG] handle_registration: google_auth直後のメッセージも会社名として処理")
+                # 再帰呼び出しでcompany_nameステップを処理
+                handle_registration(event, updated_session, text)
+            return
         else:
             print(f"[DEBUG] handle_registration: 認証未完了 user_id={user_id}")
             auth_url = auth_service.get_auth_url(user_id)
