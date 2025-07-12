@@ -112,26 +112,14 @@ def auth_callback():
         
         if auth_service.handle_callback(code, state):
             print(f"[DEBUG] auth_callback: 認証成功 user_id={state}")
-            # 認証完了後にLINEにプッシュメッセージでメインメニューを表示
+            # 認証完了後に会社情報入力の案内を送信
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    buttons_template = TemplateMessage(
-                        altText='メインメニュー',
-                        template=ButtonsTemplate(
-                            title='✅ 登録完了',
-                            text='何をお手伝いしますか？',
-                            actions=[
-                                PostbackAction(label='見積書を作る', data='create_estimate'),
-                                PostbackAction(label='請求書を作る', data='create_invoice'),
-                                PostbackAction(label='会社情報を編集', data='edit_company_info')
-                            ]
-                        )
-                    )
                     line_bot_api.push_message(
                         PushMessageRequest(
                             to=state,
-                            messages=[buttons_template]
+                            messages=[TextMessage(text="✅ Google認証が完了しました！\n\n次に会社情報を登録しましょう。\n会社名（法人・屋号含む）を教えてください。")]
                         )
                     )
             except Exception as e:
@@ -231,20 +219,34 @@ def handle_message(event):
             return
     
     if not session:
-        # 新規ユーザー - 初期登録フロー開始
-        session_manager.create_session(user_id, {'state': 'registration', 'step': 'company_name'})
-        try:
-            print(f"[DEBUG] handle_message: reply_token={event.reply_token}, event={event}")
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[TextMessage(text="👩‍💼LINE見積書・請求書Botへようこそ！\n\nまずは会社情報を登録しましょう。\n会社名（法人・屋号含む）を教えてください。")]
+        # 新規ユーザー - 最初にGoogle認証を行う
+        session_manager.create_session(user_id, {'state': 'registration', 'step': 'google_auth'})
+        auth_url = auth_service.get_auth_url(user_id)
+        if auth_url:
+            try:
+                print(f"[DEBUG] handle_message: reply_token={event.reply_token}, event={event}")
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text="👩‍💼LINE見積書・請求書Botへようこそ！\n\nまずはGoogle認証を行ってください。\n以下のリンクからGoogle Driveへのアクセスを許可してください：\n\n" + auth_url)]
+                        )
                     )
-                )
-        except Exception as e:
-            print(f"[ERROR] handle_message: reply_message送信時に例外発生: {e}")
+            except Exception as e:
+                print(f"[ERROR] handle_message: reply_message送信時に例外発生: {e}")
+        else:
+            try:
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text="👩‍💼LINE見積書・請求書Botへようこそ！\n\nGoogle認証URLの生成に失敗しました。しばらく時間をおいて再度お試しください。")]
+                        )
+                    )
+            except Exception as e:
+                print(f"[ERROR] handle_message: reply_message送信時に例外発生: {e}")
         return
     
     # 既存ユーザーの処理
@@ -275,22 +277,56 @@ def handle_postback(event):
         show_document_creation_menu(event, 'invoice')
     
     elif data == 'edit_company_info':
-        session_manager.update_session(user_id, {
-            'state': 'registration',
-            'step': 'company_name'
-        })
-        try:
-            print(f"[DEBUG] handle_postback: reply_token={event.reply_token}, event={event}")
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[TextMessage(text="会社情報の編集を開始します。\n\n会社名を教えてください。")]
+        # 認証済みユーザーかチェック
+        if auth_service.is_authenticated(user_id):
+            # 認証済みの場合は直接会社情報編集に進む
+            session_manager.update_session(user_id, {
+                'state': 'registration',
+                'step': 'company_name'
+            })
+            try:
+                print(f"[DEBUG] handle_postback: reply_token={event.reply_token}, event={event}")
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text="会社情報の編集を開始します。\n\n会社名を教えてください。")]
+                        )
                     )
-                )
-        except Exception as e:
-            print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+            except Exception as e:
+                print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+        else:
+            # 未認証の場合は認証から開始
+            session_manager.update_session(user_id, {
+                'state': 'registration',
+                'step': 'google_auth'
+            })
+            auth_url = auth_service.get_auth_url(user_id)
+            if auth_url:
+                try:
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text="🔐 会社情報を編集するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
+                            )
+                        )
+                except Exception as e:
+                    print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+            else:
+                try:
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
+                            )
+                        )
+                except Exception as e:
+                    print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
     
     elif data == 'confirm_generate':
         session = session_manager.get_session(user_id)
@@ -354,7 +390,57 @@ def handle_registration(event, session, text):
     user_id = event.source.user_id
     step = session.get('step')
     
-    if step == 'company_name':
+    if step == 'google_auth':
+        # Google認証の確認
+        print(f"[DEBUG] handle_registration: user_id={user_id}")
+        print(f"[DEBUG] handle_registration: is_authenticated={auth_service.is_authenticated(user_id)}")
+        if auth_service.is_authenticated(user_id):
+            print(f"[DEBUG] handle_registration: 認証完了。会社情報入力に進む。")
+            session_manager.update_session(user_id, {
+                'step': 'company_name'
+            })
+            try:
+                print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text="✅ Google認証が完了しました！\n\n次に会社情報を登録しましょう。\n会社名（法人・屋号含む）を教えてください。")]
+                        )
+                    )
+            except Exception as e:
+                print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
+        else:
+            print(f"[DEBUG] handle_registration: 認証未完了 user_id={user_id}")
+            auth_url = auth_service.get_auth_url(user_id)
+            print(f"[DEBUG] handle_registration: auth_url={auth_url}")
+            try:
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    if auth_url:
+                        print(f"[DEBUG] handle_registration: 認証URL送信前 reply_token={event.reply_token}, event={event}")
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text="🔐 Google認証が完了していません。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
+                            )
+                        )
+                        print(f"[DEBUG] handle_registration: 認証URL送信完了")
+                    else:
+                        print(f"[DEBUG] handle_registration: 認証URL生成失敗 reply_token={event.reply_token}, event={event}")
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
+                            )
+                        )
+            except Exception as e:
+                print(f"[ERROR] handle_registration: 認証URL送信時に例外発生: {e}")
+                import traceback
+                traceback.print_exc()
+    
+    elif step == 'company_name':
         session_manager.update_session(user_id, {
             'company_name': text,
             'step': 'address'
@@ -391,124 +477,54 @@ def handle_registration(event, session, text):
             print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
     
     elif step == 'bank_account':
+        # 銀行口座入力完了後、ユーザー情報を永続化して登録完了
         session_manager.update_session(user_id, {
-            'bank_account': text,
-            'step': 'google_auth'
+            'bank_account': text
         })
-        auth_url = auth_service.get_auth_url(user_id)
-        print(f"[DEBUG] handle_registration: auth_url={auth_url}")
+        
+        # ユーザー情報を永続化
+        user_info = {
+            'company_name': session.get('company_name'),
+            'address': session.get('address'),
+            'bank_account': text
+        }
+        session_manager.save_user_info(user_id, user_info)
+
+        # 登録完了
+        session_manager.update_session(user_id, {
+            'state': 'menu',
+            'registration_complete': True,
+            'step': None,
+            'items': [],
+            'notes': '',
+            'email': ''
+        })
+        
+        # 登録完了メッセージとメインメニューを一緒に送信
+        buttons_template = TemplateMessage(
+            altText='メインメニュー',
+            template=ButtonsTemplate(
+                title='✅ 登録完了',
+                text='何をお手伝いしますか？',
+                actions=[
+                    PostbackAction(label='見積書を作る', data='create_estimate'),
+                    PostbackAction(label='請求書を作る', data='create_invoice'),
+                    PostbackAction(label='会社情報を編集', data='edit_company_info')
+                ]
+            )
+        )
         try:
             print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                if auth_url:
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
-                            messages=[TextMessage(text="✅ 銀行口座を登録しました。\n\n最後にGoogle認証を行います。\n以下のリンクからGoogle Driveへのアクセスを許可してください：\n\n" + auth_url)]
-                        )
-                    )
-                else:
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
-                            messages=[TextMessage(text="✅ 銀行口座を登録しました。\n\nGoogle認証URLの生成に失敗しました。")]
-                        )
-                    )
-        except Exception as e:
-            print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
-    
-    elif step == 'google_auth':
-        # Google認証の確認
-        print(f"[DEBUG] handle_registration: user_id={user_id}")
-        print(f"[DEBUG] handle_registration: is_authenticated={auth_service.is_authenticated(user_id)}")
-        if auth_service.is_authenticated(user_id):
-            print(f"[DEBUG] handle_registration: 認証完了。登録処理を続行。")
-            # ユーザー情報を永続化
-            user_info = {
-                'company_name': session.get('company_name'),
-                'address': session.get('address'),
-                'bank_account': session.get('bank_account')
-            }
-            session_manager.save_user_info(user_id, user_info)
-
-            # Google認証トークンが本当に存在する場合のみregistration_completeを付与
-            if auth_service.is_authenticated(user_id):
-                session_manager.update_session(user_id, {
-                    'state': 'menu',
-                    'registration_complete': True,
-                    'step': None,
-                    'items': [],
-                    'notes': '',
-                    'email': ''
-                })
-                # 登録完了メッセージとメインメニューを一緒に送信
-                buttons_template = TemplateMessage(
-                    altText='メインメニュー',
-                    template=ButtonsTemplate(
-                        title='✅ 登録完了',
-                        text='何をお手伝いしますか？',
-                        actions=[
-                            PostbackAction(label='見積書を作る', data='create_estimate'),
-                            PostbackAction(label='請求書を作る', data='create_invoice'),
-                            PostbackAction(label='会社情報を編集', data='edit_company_info')
-                        ]
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[buttons_template]
                     )
                 )
-                try:
-                    print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
-                    with ApiClient(configuration) as api_client:
-                        line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
-                                messages=[buttons_template]
-                            )
-                        )
-                except Exception as e:
-                    print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
-            else:
-                print(f"[ERROR] handle_registration: Google認証トークンが見つかりません。registration_completeを付与しません。")
-                try:
-                    print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
-                    with ApiClient(configuration) as api_client:
-                        line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
-                                messages=[TextMessage(text="❌ Google認証トークンが見つかりません。再度認証をお試しください。")]
-                            )
-                        )
-                except Exception as e:
-                    print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
-        else:
-            print(f"[DEBUG] handle_registration: 認証未完了 user_id={user_id}")
-            auth_url = auth_service.get_auth_url(user_id)
-            print(f"[DEBUG] handle_registration: auth_url={auth_url}")
-            try:
-                with ApiClient(configuration) as api_client:
-                    line_bot_api = MessagingApi(api_client)
-                    if auth_url:
-                        print(f"[DEBUG] handle_registration: 認証URL送信前 reply_token={event.reply_token}, event={event}")
-                        line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
-                                messages=[TextMessage(text="🔐 Google認証が完了していません。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
-                            )
-                        )
-                        print(f"[DEBUG] handle_registration: 認証URL送信完了")
-                    else:
-                        print(f"[DEBUG] handle_registration: 認証URL生成失敗 reply_token={event.reply_token}, event={event}")
-                        line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
-                                messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
-                            )
-                        )
-            except Exception as e:
-                print(f"[ERROR] handle_registration: 認証URL送信時に例外発生: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception as e:
+            print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
 
 def handle_menu(event, session, text):
     """メインメニューの処理"""
@@ -530,22 +546,56 @@ def handle_menu(event, session, text):
         show_document_creation_menu(event, 'invoice')
     
     elif text == "会社情報を編集":
-        session_manager.update_session(event.source.user_id, {
-            'state': 'registration',
-            'step': 'company_name'
-        })
-        try:
-            print(f"[DEBUG] handle_menu: reply_token={event.reply_token}, event={event}")
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[TextMessage(text="会社情報の編集を開始します。\n\n会社名を教えてください。")]
+        # 認証済みユーザーかチェック
+        if auth_service.is_authenticated(event.source.user_id):
+            # 認証済みの場合は直接会社情報編集に進む
+            session_manager.update_session(event.source.user_id, {
+                'state': 'registration',
+                'step': 'company_name'
+            })
+            try:
+                print(f"[DEBUG] handle_menu: reply_token={event.reply_token}, event={event}")
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text="会社情報の編集を開始します。\n\n会社名を教えてください。")]
+                        )
                     )
-                )
-        except Exception as e:
-            print(f"[ERROR] handle_menu: reply_message送信時に例外発生: {e}")
+            except Exception as e:
+                print(f"[ERROR] handle_menu: reply_message送信時に例外発生: {e}")
+        else:
+            # 未認証の場合は認証から開始
+            session_manager.update_session(event.source.user_id, {
+                'state': 'registration',
+                'step': 'google_auth'
+            })
+            auth_url = auth_service.get_auth_url(event.source.user_id)
+            if auth_url:
+                try:
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text="🔐 会社情報を編集するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
+                            )
+                        )
+                except Exception as e:
+                    print(f"[ERROR] handle_menu: reply_message送信時に例外発生: {e}")
+            else:
+                try:
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
+                            )
+                        )
+                except Exception as e:
+                    print(f"[ERROR] handle_menu: reply_message送信時に例外発生: {e}")
     
     else:
         show_main_menu(event)
@@ -761,7 +811,7 @@ def handle_document_creation(event, session, text):
                     line_bot_api.reply_message(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
-                            messages=[TextMessage(text="🔐 Google認証が完了していません。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
+                            messages=[TextMessage(text="🔐 書類を作成するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
                         )
                     )
                     print(f"[DEBUG] handle_document_creation: 認証URL送信完了")
