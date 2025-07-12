@@ -71,6 +71,7 @@ class GoogleSheetsService:
                 ]
             else:
                 # 請求書の場合
+                print(f"[DEBUG] 請求書: 住所(F10)={data.get('address', '')}, 振込先(C34)={data.get('bank_account', '')}")
                 basic_updates = [
                     ('F8', data.get('company_name', '')),  # 会社名（F8）
                     ('F10', data.get('address', '')),    # 住所（F10）
@@ -86,6 +87,7 @@ class GoogleSheetsService:
             # 基本情報を更新
             for cell, value in basic_updates:
                 if value:  # 値がある場合のみ更新
+                    print(f"[DEBUG] update_values: {cell} ← {value}")
                     service.spreadsheets().values().update(
                         spreadsheetId=spreadsheet_id,
                         range=f'{sheet_name}!{cell}',
