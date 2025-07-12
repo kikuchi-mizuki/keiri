@@ -80,7 +80,7 @@ class GoogleSheetsService:
                     ('E16', data.get('quantity', '')),  # 数量
                     ('F16', int(data.get('unit_price', 0)) if str(data.get('unit_price', '')).replace('.', '', 1).isdigit() else ''),  # 単価
                     ('G3', data.get('due_date', '')),  # 支払い期日
-                    ('C34', data.get('bank_account', '')),  # 振込先
+                    ('C34', data.get('bank_account', '')),  # 振込先（C34）
                 ]
             
             # 基本情報を更新
