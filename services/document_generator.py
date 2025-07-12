@@ -172,6 +172,7 @@ class DocumentGenerator:
             'items': items,
             'total_amount': total_amount,
         }
+        print(f"[DEBUG] _prepare_document_data: address={document_data['address']}, bank_account={document_data['bank_account']}")
         
         return document_data
     
