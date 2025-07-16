@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from flask import Flask, request, abort, redirect, url_for, send_file, after_this_request
 from linebot.v3.messaging import (
-    MessagingApi, Configuration, ApiClient, ReplyMessageRequest, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage
+    MessagingApi, Configuration, ApiClient, ReplyMessageRequest, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse
 )
 from linebot.v3.webhooks.models import MessageEvent, PostbackEvent
 from linebot.v3.webhook import WebhookHandler
@@ -460,100 +460,36 @@ def handle_postback(event):
                 })
                 return
             
-            # 既存シート一覧をボタン形式で表示
-            from linebot.v3.messaging import FlexMessage, FlexContainer, BoxComponent, TextComponent, ButtonComponent, SeparatorComponent
+            # 既存シート一覧をテキスト形式で表示
+            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
             
-            # 新規作成ボタン
-            new_sheet_button = ButtonComponent(
-                action=PostbackAction(
-                    label="📄 新規シートを作成",
-                    data=f"new_sheet_{doc_type}"
-                ),
-                style="primary",
-                color="#4CAF50"
-            )
+            # 新規作成オプションを含むメッセージ
+            message_text = f"📄{doc_name}の作成方法を選択してください：\n\n"
+            message_text += "🆕 新規シートを作成する場合は「新規作成」と入力してください。\n\n"
+            message_text += f"📋 既存の{doc_name}シートを選択する場合は、以下の一覧からIDを入力してください：\n\n"
             
-            # 既存シートボタン（最大4件まで）
-            sheet_buttons = []
-            for i, sheet in enumerate(spreadsheets[:4], 1):
+            # 既存シート一覧（最大10件まで）
+            for i, sheet in enumerate(spreadsheets[:10], 1):
                 # 日付を整形
                 from datetime import datetime
                 modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
-                formatted_date = modified_time.strftime('%m/%d %H:%M')
+                formatted_date = modified_time.strftime('%Y/%m/%d %H:%M')
                 
-                # ボタンラベルを短縮（長すぎる場合は省略）
-                label = sheet['name']
-                if len(label) > 20:
-                    label = label[:17] + "..."
-                
-                sheet_button = ButtonComponent(
-                    action=PostbackAction(
-                        label=f"{label} ({formatted_date})",
-                        data=f"select_sheet_{sheet['id']}"
-                    ),
-                    style="secondary",
-                    color="#2196F3"
-                )
-                sheet_buttons.append(sheet_button)
+                message_text += f"{i}. {sheet['name']}\n"
+                message_text += f"   ID: {sheet['id']}\n"
+                message_text += f"   更新日: {formatted_date}\n\n"
             
-            # 他にもある場合のボタン
-            if len(spreadsheets) > 4:
-                more_button = ButtonComponent(
-                    action=PostbackAction(
-                        label=f"📋 他 {len(spreadsheets) - 4}件を表示",
-                        data=f"show_more_sheets_{doc_type}"
-                    ),
-                    style="secondary",
-                    color="#FF9800"
-                )
-                sheet_buttons.append(more_button)
+            if len(spreadsheets) > 10:
+                message_text += f"（他 {len(spreadsheets) - 10}件あります）\n\n"
             
-            # Flex Messageの構築
-            flex_contents = [
-                BoxComponent(
-                    layout="vertical",
-                    spacing="md",
-                    contents=[
-                        TextComponent(
-                            text=f"📄 {doc_name}の作成方法を選択",
-                            weight="bold",
-                            size="lg",
-                            color="#333333"
-                        ),
-                        TextComponent(
-                            text="新規作成するか、既存のスプレッドシートを選択してください",
-                            size="sm",
-                            color="#666666",
-                            wrap=True
-                        )
-                    ]
-                ),
-                SeparatorComponent(margin="lg"),
-                BoxComponent(
-                    layout="vertical",
-                    spacing="sm",
-                    contents=[new_sheet_button] + sheet_buttons
-                )
-            ]
-            
-            flex_message = FlexMessage(
-                altText=f"{doc_name}作成方法選択",
-                contents=FlexContainer(
-                    type="bubble",
-                    body=BoxComponent(
-                        layout="vertical",
-                        spacing="md",
-                        contents=flex_contents
-                    )
-                )
-            )
+            message_text += "選択するシートのIDを入力するか、「新規作成」と入力してください。"
             
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[flex_message]
+                        messages=[TextMessage(text=message_text)]
                     )
                 )
         except Exception as e:
@@ -932,68 +868,26 @@ def show_main_menu(event):
     """メインメニューの表示"""
     print("[DEBUG] show_main_menu: 開始")
     
-    # Flex Messageを使用した美しいUI
-    from linebot.v3.messaging import FlexMessage, FlexContainer, BoxComponent, TextComponent, ButtonComponent, SeparatorComponent
-    
-    flex_message = FlexMessage(
+    # ボタンテンプレートを使用したメニュー
+    buttons_template = TemplateMessage(
         altText='メインメニュー',
-        contents=FlexContainer(
-            type="bubble",
-            body=BoxComponent(
-                layout="vertical",
-                spacing="md",
-                contents=[
-                    BoxComponent(
-                        layout="vertical",
-                        spacing="sm",
-                        contents=[
-                            TextComponent(
-                                text="✅ 登録完了",
-                                weight="bold",
-                                size="lg",
-                                color="#4CAF50"
-                            ),
-                            TextComponent(
-                                text="何をお手伝いしますか？",
-                                size="sm",
-                                color="#666666",
-                                wrap=True
-                            )
-                        ]
-                    ),
-                    SeparatorComponent(margin="lg"),
-                    BoxComponent(
-                        layout="vertical",
-                        spacing="sm",
-                        contents=[
-                            ButtonComponent(
-                                action=PostbackAction(
-                                    label="📄 見積書を作る",
-                                    data="create_estimate"
-                                ),
-                                style="primary",
-                                color="#2196F3"
-                            ),
-                            ButtonComponent(
-                                action=PostbackAction(
-                                    label="📋 請求書を作る",
-                                    data="create_invoice"
-                                ),
-                                style="primary",
-                                color="#FF9800"
-                            ),
-                            ButtonComponent(
-                                action=PostbackAction(
-                                    label="⚙️ 会社情報を編集",
-                                    data="edit_company_info"
-                                ),
-                                style="secondary",
-                                color="#9C27B0"
-                            )
-                        ]
-                    )
-                ]
-            )
+        template=ButtonsTemplate(
+            title='✅ 登録完了',
+            text='何をお手伝いしますか？',
+            actions=[
+                PostbackAction(
+                    label='📄 見積書を作る',
+                    data='create_estimate'
+                ),
+                PostbackAction(
+                    label='📋 請求書を作る',
+                    data='create_invoice'
+                ),
+                PostbackAction(
+                    label='⚙️ 会社情報を編集',
+                    data='edit_company_info'
+                )
+            ]
         )
     )
     
@@ -1004,7 +898,7 @@ def show_main_menu(event):
             line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[flex_message]
+                    messages=[buttons_template]
                 )
             )
     except Exception as e:
@@ -1026,68 +920,26 @@ def show_document_creation_menu(event, doc_type):
         'items': []
     })
     
-    # Flex Messageを使用した美しいUI
-    from linebot.v3.messaging import FlexMessage, FlexContainer, BoxComponent, TextComponent, ButtonComponent, SeparatorComponent
-    
-    flex_message = FlexMessage(
+    # ボタンテンプレートを使用したメニュー
+    buttons_template = TemplateMessage(
         altText=f'{doc_name}作成方法選択',
-        contents=FlexContainer(
-            type="bubble",
-            body=BoxComponent(
-                layout="vertical",
-                spacing="md",
-                contents=[
-                    BoxComponent(
-                        layout="vertical",
-                        spacing="sm",
-                        contents=[
-                            TextComponent(
-                                text=f"📄 {doc_name}の作成",
-                                weight="bold",
-                                size="lg",
-                                color="#333333"
-                            ),
-                            TextComponent(
-                                text="どの方法で作成しますか？",
-                                size="sm",
-                                color="#666666",
-                                wrap=True
-                            )
-                        ]
-                    ),
-                    SeparatorComponent(margin="lg"),
-                    BoxComponent(
-                        layout="vertical",
-                        spacing="sm",
-                        contents=[
-                            ButtonComponent(
-                                action=PostbackAction(
-                                    label="🆕 新規シートを作成",
-                                    data=f"new_sheet_{doc_type}"
-                                ),
-                                style="primary",
-                                color="#4CAF50"
-                            ),
-                            ButtonComponent(
-                                action=PostbackAction(
-                                    label="📋 既存シートに追加",
-                                    data=f"existing_sheet_{doc_type}"
-                                ),
-                                style="secondary",
-                                color="#2196F3"
-                            ),
-                            ButtonComponent(
-                                action=PostbackAction(
-                                    label="❌ キャンセル",
-                                    data="cancel_creation"
-                                ),
-                                style="secondary",
-                                color="#F44336"
-                            )
-                        ]
-                    )
-                ]
-            )
+        template=ButtonsTemplate(
+            title=f'📄 {doc_name}の作成',
+            text='どの方法で作成しますか？',
+            actions=[
+                PostbackAction(
+                    label='🆕 新規シートを作成',
+                    data=f'new_sheet_{doc_type}'
+                ),
+                PostbackAction(
+                    label='📋 既存シートに追加',
+                    data=f'existing_sheet_{doc_type}'
+                ),
+                PostbackAction(
+                    label='❌ キャンセル',
+                    data='cancel_creation'
+                )
+            ]
         )
     )
     
@@ -1098,7 +950,7 @@ def show_document_creation_menu(event, doc_type):
             line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[flex_message]
+                    messages=[buttons_template]
                 )
             )
     except Exception as e:
