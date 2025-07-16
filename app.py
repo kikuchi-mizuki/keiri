@@ -417,18 +417,87 @@ def handle_postback(event):
             'creation_method': 'existing_sheet',
             'items': []
         })
-        doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+        
+        # 既存スプレッドシート一覧を取得して表示
         try:
+            credentials = auth_service.get_credentials(user_id)
+            if not credentials:
+                # 認証が必要な場合
+                session_manager.update_session(user_id, {
+                    'state': 'registration',
+                    'step': 'google_auth'
+                })
+                auth_url = auth_service.get_auth_url(user_id)
+                if auth_url:
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text="🔐 既存シートを確認するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
+                            )
+                        )
+                return
+            
+            # 既存スプレッドシート一覧を取得
+            spreadsheets = google_sheets_service.list_spreadsheets_by_type(credentials, doc_type, max_results=10)
+            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+            
+            if not spreadsheets:
+                # 既存シートがない場合
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text=f"📄{doc_name}の既存シートが見つかりませんでした。\n\n新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                        )
+                    )
+                # 新規作成に切り替え
+                session_manager.update_session(user_id, {
+                    'step': 'client_name',
+                    'creation_method': 'new_sheet'
+                })
+                return
+            
+            # 既存シート一覧を表示
+            sheet_list_text = f"📄{doc_name}の既存シート一覧：\n\n"
+            for i, sheet in enumerate(spreadsheets[:5], 1):  # 最大5件まで表示
+                # 日付を整形
+                from datetime import datetime
+                modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
+                formatted_date = modified_time.strftime('%Y/%m/%d %H:%M')
+                
+                sheet_list_text += f"{i}. {sheet['name']}\n"
+                sheet_list_text += f"   最終更新: {formatted_date}\n"
+                sheet_list_text += f"   ID: {sheet['id']}\n\n"
+            
+            if len(spreadsheets) > 5:
+                sheet_list_text += f"... 他 {len(spreadsheets) - 5}件\n\n"
+            
+            sheet_list_text += "使用したいスプレッドシートのIDを入力してください。\n"
+            sheet_list_text += "（新規作成の場合は「新規作成」と入力してください）"
+            
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=f"📄{doc_name}の既存シート選択を開始します。\n\n既存の{doc_name}スプレッドシートを選択してください。\n\n（新規作成の場合は「新規作成」と入力してください）")]
+                        messages=[TextMessage(text=sheet_list_text)]
                     )
                 )
         except Exception as e:
-            print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+            print(f"[ERROR] handle_postback: 既存シート一覧取得時に例外発生: {e}")
+            # エラーの場合は手動入力にフォールバック
+            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=f"📄{doc_name}の既存シート選択を開始します。\n\n既存の{doc_name}スプレッドシートIDを入力してください。\n\n（新規作成の場合は「新規作成」と入力してください）")]
+                    )
+                )
         return
     
     elif data == 'cancel_creation':

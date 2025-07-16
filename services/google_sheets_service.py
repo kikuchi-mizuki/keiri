@@ -304,21 +304,54 @@ class GoogleSheetsService:
             logger.error(f"PDF export error: {error}")
             raise 
 
-    def list_invoice_sheets(self, credentials, max_results=10):
-        """Google Drive上の請求書スプレッドシート一覧を取得"""
+    def list_spreadsheets_by_type(self, credentials, document_type, max_results=10):
+        """Google Drive上の指定タイプのスプレッドシート一覧を取得"""
         try:
             drive_service = build('drive', 'v3', credentials=credentials)
-            query = "mimeType='application/vnd.google-apps.spreadsheet' and name contains '請求書' and trashed = false"
+            
+            # ドキュメントタイプに応じて検索クエリを設定
+            if document_type == 'estimate':
+                search_term = '見積書'
+            elif document_type == 'invoice':
+                search_term = '請求書'
+            else:
+                # デフォルトは全てのスプレッドシート
+                search_term = ''
+            
+            if search_term:
+                query = f"mimeType='application/vnd.google-apps.spreadsheet' and name contains '{search_term}' and trashed = false"
+            else:
+                query = "mimeType='application/vnd.google-apps.spreadsheet' and trashed = false"
+            
             results = drive_service.files().list(
                 q=query,
                 pageSize=max_results,
-                fields="files(id, name, createdTime)"
+                fields="files(id, name, createdTime, modifiedTime)",
+                orderBy="modifiedTime desc"  # 最新のものから順に取得
             ).execute()
             files = results.get('files', [])
-            return files
+            
+            # ファイル情報を整形
+            formatted_files = []
+            for file in files:
+                formatted_files.append({
+                    'id': file['id'],
+                    'name': file['name'],
+                    'created_time': file.get('createdTime', ''),
+                    'modified_time': file.get('modifiedTime', ''),
+                    'url': f"https://docs.google.com/spreadsheets/d/{file['id']}/edit"
+                })
+            
+            logger.info(f"Found {len(formatted_files)} {document_type} spreadsheets")
+            return formatted_files
+            
         except Exception as e:
-            logger.error(f"list_invoice_sheets error: {e}")
-            return [] 
+            logger.error(f"list_spreadsheets_by_type error: {e}")
+            return []
+
+    def list_invoice_sheets(self, credentials, max_results=10):
+        """Google Drive上の請求書スプレッドシート一覧を取得（後方互換性のため）"""
+        return self.list_spreadsheets_by_type(credentials, 'invoice', max_results) 
 
     def add_sheet_from_template(self, credentials, spreadsheet_id, template_sheet_name, new_sheet_name):
         """既存スプレッドシートにテンプレートシートの内容をコピーした新しいシートを追加"""
