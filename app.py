@@ -383,6 +383,60 @@ def handle_postback(event):
             traceback.print_exc()
         return
     
+    elif data.startswith('new_sheet_'):
+        # 新規シート作成
+        doc_type = data.replace('new_sheet_', '')
+        session_manager.update_session(user_id, {
+            'state': 'document_creation',
+            'document_type': doc_type,
+            'step': 'client_name',
+            'creation_method': 'new_sheet',
+            'items': []
+        })
+        doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=f"📄{doc_name}の新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                    )
+                )
+        except Exception as e:
+            print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+        return
+    
+    elif data.startswith('existing_sheet_'):
+        # 既存シートに追加
+        doc_type = data.replace('existing_sheet_', '')
+        session_manager.update_session(user_id, {
+            'state': 'document_creation',
+            'document_type': doc_type,
+            'step': 'select_existing_sheet',
+            'creation_method': 'existing_sheet',
+            'items': []
+        })
+        doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=f"📄{doc_name}の既存シート選択を開始します。\n\n既存の{doc_name}スプレッドシートを選択してください。\n\n（新規作成の場合は「新規作成」と入力してください）")]
+                    )
+                )
+        except Exception as e:
+            print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+        return
+    
+    elif data == 'cancel_creation':
+        # 作成をキャンセル
+        session_manager.update_session(user_id, {'state': 'menu', 'step': None})
+        show_main_menu(event)
+        return
+    
     else:
         show_main_menu(event)
 
@@ -675,13 +729,27 @@ def show_document_creation_menu(event, doc_type):
     session = session_manager.get_session(user_id)
     print(f"[DEBUG] show_document_creation_menu: user_id={user_id}, session={session}")
 
-    # 見積書・請求書ともに新規作成フローに統一
+    # 書類作成方法の選択メニューを表示
     session_manager.update_session(user_id, {
         'state': 'document_creation',
         'document_type': doc_type,
-        'step': 'client_name',
+        'step': 'select_creation_method',
         'items': []
     })
+    
+    buttons_template = TemplateMessage(
+        altText=f'{doc_name}作成方法選択',
+        template=ButtonsTemplate(
+            title=f'{doc_name}の作成',
+            text='どの方法で作成しますか？',
+            actions=[
+                PostbackAction(label='新規シートを作成', data=f'new_sheet_{doc_type}'),
+                PostbackAction(label='既存シートに追加', data=f'existing_sheet_{doc_type}'),
+                PostbackAction(label='キャンセル', data='cancel_creation')
+            ]
+        )
+    )
+    
     try:
         print(f"[DEBUG] show_document_creation_menu: reply_token={event.reply_token}, event={event}")
         with ApiClient(configuration) as api_client:
@@ -689,7 +757,7 @@ def show_document_creation_menu(event, doc_type):
             line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[TextMessage(text=f"📄{doc_name}の作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                    messages=[buttons_template]
                 )
             )
     except Exception as e:
@@ -817,7 +885,49 @@ def handle_document_creation(event, session, text):
     # 認証チェックが完了したら、以降のステップでは認証チェックを行わない
     print(f"[DEBUG] handle_document_creation: 認証チェック完了。ステップ処理を続行。")
 
-    # 請求書シート選択ステップ
+    # 既存シート選択ステップ
+    if step == 'select_existing_sheet':
+        if text.strip() == "新規作成":
+            # 新規作成に切り替え
+            session_manager.update_session(user_id, {
+                'step': 'client_name',
+                'creation_method': 'new_sheet'
+            })
+            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+            try:
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text=f"📄{doc_name}の新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                        )
+                    )
+            except Exception as e:
+                print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+            return
+        else:
+            # 既存シートIDとして処理
+            spreadsheet_id = text.strip()
+            session_manager.update_session(user_id, {
+                'selected_spreadsheet_id': spreadsheet_id,
+                'step': 'client_name'
+            })
+            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+            try:
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text=f"📄{doc_name}の既存シートに追加します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                        )
+                    )
+            except Exception as e:
+                print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+            return
+
+    # 請求書シート選択ステップ（既存の処理）
     if step == 'select_invoice_sheet' and text.startswith('シート選択:'):
         selected_sheet_id = text.replace('シート選択:', '').strip()
         session_manager.update_session(user_id, {
