@@ -848,28 +848,9 @@ def handle_registration(event, session, text):
         })
         
         # 登録完了メッセージとメインメニューを一緒に送信
-        buttons_template = TemplateMessage(
-            altText='メインメニュー',
-            template=ButtonsTemplate(
-                title='✅ 登録完了',
-                text='何をお手伝いしますか？',
-                actions=[
-                    PostbackAction(label='見積書を作る', data='create_estimate'),
-                    PostbackAction(label='請求書を作る', data='create_invoice'),
-                    PostbackAction(label='会社情報を編集', data='edit_company_info')
-                ]
-            )
-        )
         try:
             print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[buttons_template]
-                    )
-                )
+            show_main_menu(event)
         except Exception as e:
             print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
 
@@ -950,16 +931,69 @@ def handle_menu(event, session, text):
 def show_main_menu(event):
     """メインメニューの表示"""
     print("[DEBUG] show_main_menu: 開始")
-    buttons_template = TemplateMessage(
+    
+    # Flex Messageを使用した美しいUI
+    from linebot.v3.messaging import FlexMessage, FlexContainer, BoxComponent, TextComponent, ButtonComponent, SeparatorComponent
+    
+    flex_message = FlexMessage(
         altText='メインメニュー',
-        template=ButtonsTemplate(
-            title='LINE見積書・請求書Bot',
-            text='何をお手伝いしますか？',
-            actions=[
-                PostbackAction(label='見積書を作る', data='create_estimate'),
-                PostbackAction(label='請求書を作る', data='create_invoice'),
-                PostbackAction(label='会社情報を編集', data='edit_company_info')
-            ]
+        contents=FlexContainer(
+            type="bubble",
+            body=BoxComponent(
+                layout="vertical",
+                spacing="md",
+                contents=[
+                    BoxComponent(
+                        layout="vertical",
+                        spacing="sm",
+                        contents=[
+                            TextComponent(
+                                text="✅ 登録完了",
+                                weight="bold",
+                                size="lg",
+                                color="#4CAF50"
+                            ),
+                            TextComponent(
+                                text="何をお手伝いしますか？",
+                                size="sm",
+                                color="#666666",
+                                wrap=True
+                            )
+                        ]
+                    ),
+                    SeparatorComponent(margin="lg"),
+                    BoxComponent(
+                        layout="vertical",
+                        spacing="sm",
+                        contents=[
+                            ButtonComponent(
+                                action=PostbackAction(
+                                    label="📄 見積書を作る",
+                                    data="create_estimate"
+                                ),
+                                style="primary",
+                                color="#2196F3"
+                            ),
+                            ButtonComponent(
+                                action=PostbackAction(
+                                    label="📋 請求書を作る",
+                                    data="create_invoice"
+                                ),
+                                style="primary",
+                                color="#FF9800"
+                            ),
+                            ButtonComponent(
+                                action=PostbackAction(
+                                    label="⚙️ 会社情報を編集",
+                                    data="edit_company_info"
+                                ),
+                                style="secondary",
+                                color="#9C27B0"
+                            )
+                        ]
+                    )
+                ]
+            )
         )
     )
     
@@ -970,7 +1004,7 @@ def show_main_menu(event):
             line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[buttons_template]
+                    messages=[flex_message]
                 )
             )
     except Exception as e:
