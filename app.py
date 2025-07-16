@@ -992,16 +992,68 @@ def show_document_creation_menu(event, doc_type):
         'items': []
     })
     
-    buttons_template = TemplateMessage(
+    # Flex Messageを使用した美しいUI
+    from linebot.v3.messaging import FlexMessage, FlexContainer, BoxComponent, TextComponent, ButtonComponent, SeparatorComponent
+    
+    flex_message = FlexMessage(
         altText=f'{doc_name}作成方法選択',
-        template=ButtonsTemplate(
-            title=f'{doc_name}の作成',
-            text='どの方法で作成しますか？',
-            actions=[
-                PostbackAction(label='新規シートを作成', data=f'new_sheet_{doc_type}'),
-                PostbackAction(label='既存シートに追加', data=f'existing_sheet_{doc_type}'),
-                PostbackAction(label='キャンセル', data='cancel_creation')
-            ]
+        contents=FlexContainer(
+            type="bubble",
+            body=BoxComponent(
+                layout="vertical",
+                spacing="md",
+                contents=[
+                    BoxComponent(
+                        layout="vertical",
+                        spacing="sm",
+                        contents=[
+                            TextComponent(
+                                text=f"📄 {doc_name}の作成",
+                                weight="bold",
+                                size="lg",
+                                color="#333333"
+                            ),
+                            TextComponent(
+                                text="どの方法で作成しますか？",
+                                size="sm",
+                                color="#666666",
+                                wrap=True
+                            )
+                        ]
+                    ),
+                    SeparatorComponent(margin="lg"),
+                    BoxComponent(
+                        layout="vertical",
+                        spacing="sm",
+                        contents=[
+                            ButtonComponent(
+                                action=PostbackAction(
+                                    label="🆕 新規シートを作成",
+                                    data=f"new_sheet_{doc_type}"
+                                ),
+                                style="primary",
+                                color="#4CAF50"
+                            ),
+                            ButtonComponent(
+                                action=PostbackAction(
+                                    label="📋 既存シートに追加",
+                                    data=f"existing_sheet_{doc_type}"
+                                ),
+                                style="secondary",
+                                color="#2196F3"
+                            ),
+                            ButtonComponent(
+                                action=PostbackAction(
+                                    label="❌ キャンセル",
+                                    data="cancel_creation"
+                                ),
+                                style="secondary",
+                                color="#F44336"
+                            )
+                        ]
+                    )
+                ]
+            )
         )
     )
     
@@ -1012,7 +1064,7 @@ def show_document_creation_menu(event, doc_type):
             line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[buttons_template]
+                    messages=[flex_message]
                 )
             )
     except Exception as e:
