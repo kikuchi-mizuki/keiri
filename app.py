@@ -460,9 +460,198 @@ def handle_postback(event):
                 })
                 return
             
-            # 既存シート一覧を表示
-            sheet_list_text = f"📄{doc_name}の既存シート一覧：\n\n"
-            for i, sheet in enumerate(spreadsheets[:5], 1):  # 最大5件まで表示
+            # 既存シート一覧をボタン形式で表示
+            from linebot.v3.messaging import FlexMessage, FlexContainer, BoxComponent, TextComponent, ButtonComponent, SeparatorComponent
+            
+            # 新規作成ボタン
+            new_sheet_button = ButtonComponent(
+                action=PostbackAction(
+                    label="📄 新規シートを作成",
+                    data=f"new_sheet_{doc_type}"
+                ),
+                style="primary",
+                color="#4CAF50"
+            )
+            
+            # 既存シートボタン（最大4件まで）
+            sheet_buttons = []
+            for i, sheet in enumerate(spreadsheets[:4], 1):
+                # 日付を整形
+                from datetime import datetime
+                modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
+                formatted_date = modified_time.strftime('%m/%d %H:%M')
+                
+                # ボタンラベルを短縮（長すぎる場合は省略）
+                label = sheet['name']
+                if len(label) > 20:
+                    label = label[:17] + "..."
+                
+                sheet_button = ButtonComponent(
+                    action=PostbackAction(
+                        label=f"{label} ({formatted_date})",
+                        data=f"select_sheet_{sheet['id']}"
+                    ),
+                    style="secondary",
+                    color="#2196F3"
+                )
+                sheet_buttons.append(sheet_button)
+            
+            # 他にもある場合のボタン
+            if len(spreadsheets) > 4:
+                more_button = ButtonComponent(
+                    action=PostbackAction(
+                        label=f"📋 他 {len(spreadsheets) - 4}件を表示",
+                        data=f"show_more_sheets_{doc_type}"
+                    ),
+                    style="secondary",
+                    color="#FF9800"
+                )
+                sheet_buttons.append(more_button)
+            
+            # Flex Messageの構築
+            flex_contents = [
+                BoxComponent(
+                    layout="vertical",
+                    spacing="md",
+                    contents=[
+                        TextComponent(
+                            text=f"📄 {doc_name}の作成方法を選択",
+                            weight="bold",
+                            size="lg",
+                            color="#333333"
+                        ),
+                        TextComponent(
+                            text="新規作成するか、既存のスプレッドシートを選択してください",
+                            size="sm",
+                            color="#666666",
+                            wrap=True
+                        )
+                    ]
+                ),
+                SeparatorComponent(margin="lg"),
+                BoxComponent(
+                    layout="vertical",
+                    spacing="sm",
+                    contents=[new_sheet_button] + sheet_buttons
+                )
+            ]
+            
+            flex_message = FlexMessage(
+                altText=f"{doc_name}作成方法選択",
+                contents=FlexContainer(
+                    type="bubble",
+                    body=BoxComponent(
+                        layout="vertical",
+                        spacing="md",
+                        contents=flex_contents
+                    )
+                )
+            )
+            
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[flex_message]
+                    )
+                )
+        except Exception as e:
+            print(f"[ERROR] handle_postback: 既存シート一覧取得時に例外発生: {e}")
+            # エラーの場合は手動入力にフォールバック
+            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=f"📄{doc_name}の既存シート選択を開始します。\n\n既存の{doc_name}スプレッドシートIDを入力してください。\n\n（新規作成の場合は「新規作成」と入力してください）")]
+                    )
+                )
+        return
+    
+    elif data.startswith('select_sheet_'):
+        # 既存シートを選択
+        spreadsheet_id = data.replace('select_sheet_', '')
+        session = session_manager.get_session(user_id)
+        doc_type = session.get('document_type')
+        
+        session_manager.update_session(user_id, {
+            'selected_spreadsheet_id': spreadsheet_id,
+            'step': 'client_name',
+            'creation_method': 'existing_sheet'
+        })
+        
+        doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=f"📄{doc_name}の既存シートに追加します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                    )
+                )
+        except Exception as e:
+            print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+        return
+    
+    elif data.startswith('show_more_sheets_'):
+        # より多くのシートを表示
+        doc_type = data.replace('show_more_sheets_', '')
+        session_manager.update_session(user_id, {
+            'state': 'document_creation',
+            'document_type': doc_type,
+            'step': 'select_existing_sheet',
+            'creation_method': 'existing_sheet',
+            'items': []
+        })
+        
+        # 既存スプレッドシート一覧を取得して表示（全件表示）
+        try:
+            credentials = auth_service.get_credentials(user_id)
+            if not credentials:
+                # 認証が必要な場合
+                session_manager.update_session(user_id, {
+                    'state': 'registration',
+                    'step': 'google_auth'
+                })
+                auth_url = auth_service.get_auth_url(user_id)
+                if auth_url:
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text="🔐 既存シートを確認するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
+                            )
+                        )
+                return
+            
+            # 既存スプレッドシート一覧を取得（全件）
+            spreadsheets = google_sheets_service.list_spreadsheets_by_type(credentials, doc_type, max_results=20)
+            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+            
+            if not spreadsheets:
+                # 既存シートがない場合
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text=f"📄{doc_name}の既存シートが見つかりませんでした。\n\n新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                        )
+                    )
+                # 新規作成に切り替え
+                session_manager.update_session(user_id, {
+                    'step': 'client_name',
+                    'creation_method': 'new_sheet'
+                })
+                return
+            
+            # 全件をテキスト形式で表示
+            sheet_list_text = f"📄{doc_name}の既存シート一覧（全{len(spreadsheets)}件）：\n\n"
+            for i, sheet in enumerate(spreadsheets, 1):
                 # 日付を整形
                 from datetime import datetime
                 modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
@@ -471,9 +660,6 @@ def handle_postback(event):
                 sheet_list_text += f"{i}. {sheet['name']}\n"
                 sheet_list_text += f"   最終更新: {formatted_date}\n"
                 sheet_list_text += f"   ID: {sheet['id']}\n\n"
-            
-            if len(spreadsheets) > 5:
-                sheet_list_text += f"... 他 {len(spreadsheets) - 5}件\n\n"
             
             sheet_list_text += "使用したいスプレッドシートのIDを入力してください。\n"
             sheet_list_text += "（新規作成の場合は「新規作成」と入力してください）"
