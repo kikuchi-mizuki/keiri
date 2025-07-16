@@ -229,7 +229,9 @@ class AuthService:
             # トークンの有効期限をチェック
             if credentials.expired and credentials.refresh_token:
                 try:
+                    print(f"[DEBUG] get_credentials: トークン更新開始 user_id={user_id}")
                     credentials.refresh(Request())
+                    print(f"[DEBUG] get_credentials: トークン更新成功 user_id={user_id}")
 
                     # 更新されたトークンを保存
                     updated_token_info = {
@@ -241,10 +243,18 @@ class AuthService:
                         'scopes': credentials.scopes
                     }
                     session_manager.save_google_token(user_id, json.dumps(updated_token_info))
+                    print(f"[DEBUG] get_credentials: 更新されたトークンを保存完了 user_id={user_id}")
 
-                except RefreshError:
-                    print(f"[ERROR] get_credentials: RefreshError for user: {user_id}")
-                    logger.error(f"Token refresh failed for user: {user_id}")
+                except RefreshError as e:
+                    print(f"[ERROR] get_credentials: RefreshError for user: {user_id}, error: {e}")
+                    logger.error(f"Token refresh failed for user: {user_id}, error: {e}")
+                    # トークンが無効になった場合は削除
+                    session_manager.save_google_token(user_id, None)
+                    print(f"[DEBUG] get_credentials: 無効なトークンを削除 user_id={user_id}")
+                    return None
+                except Exception as e:
+                    print(f"[ERROR] get_credentials: トークン更新で予期しないエラー user_id={user_id}, error: {e}")
+                    logger.error(f"Unexpected error during token refresh for user: {user_id}, error: {e}")
                     return None
 
             return credentials

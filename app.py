@@ -137,7 +137,7 @@ def auth_callback():
                     line_bot_api.push_message(
                         PushMessageRequest(
                             to=state,
-                            messages=[TextMessage(text="❌ Google認証に失敗しました。\n\n再度お試しください。")]
+                            messages=[TextMessage(text="❌ Google認証に失敗しました。\n\nトークンの有効期限が切れている可能性があります。\n\n再度認証を行ってください。")]
                         )
                     )
             except Exception as e:
