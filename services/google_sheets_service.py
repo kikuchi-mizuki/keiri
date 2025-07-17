@@ -311,16 +311,13 @@ class GoogleSheetsService:
             
             # ドキュメントタイプに応じて検索クエリを設定
             if document_type == 'estimate':
-                search_term = '見積書'
+                # 見積書の場合：ファイル名に「見積書」または「estimate」が含まれるものを検索
+                query = "mimeType='application/vnd.google-apps.spreadsheet' and (name contains '見積書' or name contains 'estimate') and trashed = false"
             elif document_type == 'invoice':
-                search_term = '請求書'
+                # 請求書の場合：ファイル名に「請求書」または「invoice」が含まれるものを検索
+                query = "mimeType='application/vnd.google-apps.spreadsheet' and (name contains '請求書' or name contains 'invoice') and trashed = false"
             else:
                 # デフォルトは全てのスプレッドシート
-                search_term = ''
-            
-            if search_term:
-                query = f"mimeType='application/vnd.google-apps.spreadsheet' and name contains '{search_term}' and trashed = false"
-            else:
                 query = "mimeType='application/vnd.google-apps.spreadsheet' and trashed = false"
             
             results = drive_service.files().list(
