@@ -969,11 +969,11 @@ def show_document_creation_menu(event, doc_type):
             actions=[
                 PostbackAction(
                     label='🆕 新規シートを作成',
-                    data=f'new_sheet_{doc_type}'
+                    data='new_sheet'
                 ),
                 PostbackAction(
-                    label='📋 既存シートに追加',
-                    data=f'existing_sheet_{doc_type}'
+                    label='既存シート',
+                    data='existing_sheet'
                 ),
                 PostbackAction(
                     label='❌ キャンセル',
