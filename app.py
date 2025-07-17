@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from flask import Flask, request, abort, redirect, url_for, send_file, after_this_request
 from linebot.v3.messaging import (
-    MessagingApi, Configuration, ApiClient, ReplyMessageRequest, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse
+    MessagingApi, Configuration, ApiClient, ReplyMessageRequest, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage
 )
 from linebot.v3.webhooks.models import MessageEvent, PostbackEvent
 from linebot.v3.webhook import WebhookHandler
@@ -460,36 +460,76 @@ def handle_postback(event):
                 })
                 return
             
-            # 既存シート一覧をテキスト形式で表示
-            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
-            
-            # 新規作成オプションを含むメッセージ
-            message_text = f"📄{doc_name}の作成方法を選択してください：\n\n"
-            message_text += "🆕 新規シートを作成する場合は「新規作成」と入力してください。\n\n"
-            message_text += f"📋 既存の{doc_name}シートを選択する場合は、以下の一覧からIDを入力してください：\n\n"
-            
-            # 既存シート一覧（最大10件まで）
-            for i, sheet in enumerate(spreadsheets[:10], 1):
-                # 日付を整形
-                from datetime import datetime
-                modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
-                formatted_date = modified_time.strftime('%Y/%m/%d %H:%M')
-                
-                message_text += f"{i}. {sheet['name']}\n"
-                message_text += f"   ID: {sheet['id']}\n"
-                message_text += f"   更新日: {formatted_date}\n\n"
-            
-            if len(spreadsheets) > 10:
-                message_text += f"（他 {len(spreadsheets) - 10}件あります）\n\n"
-            
-            message_text += "選択するシートのIDを入力するか、「新規作成」と入力してください。"
-            
+            # 既存シート一覧をFlex MessageのボタンUIで表示
+            from linebot.v3.messaging import FlexMessage
+            flex_contents = {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "md",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": f"📄{doc_name}の既存シートを選択",
+                            "weight": "bold",
+                            "size": "lg",
+                            "color": "#333333"
+                        },
+                        {
+                            "type": "text",
+                            "text": "追加したいシートを選んでください",
+                            "size": "sm",
+                            "color": "#666666",
+                            "wrap": True
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "spacing": "sm",
+                            "contents": [
+                                *[
+                                    {
+                                        "type": "button",
+                                        "action": {
+                                            "type": "postback",
+                                            "label": f"{sheet['name'][:18] + '...' if len(sheet['name']) > 20 else sheet['name']}",
+                                            "data": f"select_sheet_{sheet['id']}"
+                                        },
+                                        "style": "secondary",
+                                        "color": "#2196F3"
+                                    }
+                                    for sheet in spreadsheets[:12]
+                                ],
+                                {
+                                    "type": "button",
+                                    "action": {
+                                        "type": "postback",
+                                        "label": "🆕 新規シートを作成",
+                                        "data": f"new_sheet_{doc_type}"
+                                    },
+                                    "style": "primary",
+                                    "color": "#4CAF50"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+            flex_message = FlexMessage(
+                altText=f"{doc_name}の既存シート選択",
+                contents=flex_contents
+            )
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=message_text)]
+                        messages=[flex_message]
                     )
                 )
         except Exception as e:
