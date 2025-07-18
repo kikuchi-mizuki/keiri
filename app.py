@@ -898,6 +898,7 @@ def handle_menu(event, session, text):
 def show_main_menu(event):
     """メインメニューの表示"""
     print("[DEBUG] show_main_menu: 開始")
+    user_id = event.source.user_id
     
     # ボタンテンプレートを使用したメニュー
     buttons_template = TemplateMessage(
@@ -926,14 +927,14 @@ def show_main_menu(event):
         print(f"[DEBUG] show_main_menu: reply_token={event.reply_token}, event={event}")
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            line_bot_api.reply_message(
+            line_bot_api.push_message(
                 PushMessageRequest(
                     to=user_id,
                     messages=[buttons_template]
                 )
             )
     except Exception as e:
-        print(f"[ERROR] show_main_menu: reply_message送信時に例外発生: {e}")
+        print(f"[ERROR] show_main_menu: push_message送信時に例外発生: {e}")
 
 def show_document_creation_menu(event, doc_type):
     """書類作成メニューの表示"""
@@ -978,14 +979,14 @@ def show_document_creation_menu(event, doc_type):
         print(f"[DEBUG] show_document_creation_menu: reply_token={event.reply_token}, event={event}")
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            line_bot_api.reply_message(
+            line_bot_api.push_message(
                 PushMessageRequest(
                     to=user_id,
                     messages=[buttons_template]
                 )
             )
     except Exception as e:
-        print(f"[ERROR] show_document_creation_menu: reply_message送信時に例外発生: {e}")
+        print(f"[ERROR] show_document_creation_menu: push_message送信時に例外発生: {e}")
 
 def handle_document_creation(event, session, text):
     print("[DEBUG] handle_document_creation: 開始")
