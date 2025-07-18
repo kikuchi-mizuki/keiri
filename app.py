@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from flask import Flask, request, abort, redirect, url_for, send_file, after_this_request
 from linebot.v3.messaging import (
-    MessagingApi, Configuration, ApiClient, ReplyMessageRequest, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage
+    MessagingApi, Configuration, ApiClient, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage
 )
 from linebot.v3.webhooks.models import MessageEvent, PostbackEvent
 from linebot.v3.webhook import WebhookHandler
@@ -216,7 +216,7 @@ def handle_message(event):
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_message: 書類作成中メッセージ送信時に例外発生: {e}")
+                print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
             generate_document(event, session)
             return
         elif text.strip() == '修正する':
@@ -231,7 +231,7 @@ def handle_message(event):
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_message: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
             return
@@ -252,7 +252,7 @@ def handle_message(event):
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_message: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
         else:
             try:
                 with ApiClient(configuration) as api_client:
@@ -264,7 +264,7 @@ def handle_message(event):
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_message: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
         return
     
     # 既存ユーザーの処理
@@ -313,7 +313,7 @@ def handle_postback(event):
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
         else:
             # 未認証の場合は認証から開始
             session_manager.update_session(user_id, {
@@ -332,19 +332,19 @@ def handle_postback(event):
                             )
                         )
                 except Exception as e:
-                    print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+                    print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
             else:
                 try:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
                         line_bot_api.push_message(
-                            ReplyMessageRequest(
+                            PushMessageRequest(
                                 to=user_id,
                                 messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
                             )
                         )
                 except Exception as e:
-                    print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+                    print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
     
     elif data == 'confirm_generate':
         session = session_manager.get_session(user_id)
@@ -362,7 +362,7 @@ def handle_postback(event):
                     )
                 )
         except Exception as e:
-            print(f"[ERROR] handle_postback: 書類作成中メッセージ送信時に例外発生: {e}")
+            print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
         generate_document(event, session)
         return
     elif data == 'edit_items':
@@ -378,7 +378,7 @@ def handle_postback(event):
                     )
                 )
         except Exception as e:
-            print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+            print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
             import traceback
             traceback.print_exc()
         return
@@ -501,7 +501,7 @@ def handle_postback(event):
                     )
                 )
         except Exception as e:
-            print(f"[ERROR] handle_postback: 既存シート一覧取得時に例外発生: {e}")
+            print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
             doc_name = "見積書" if doc_type == 'estimate' else "請求書"
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
@@ -534,7 +534,7 @@ def handle_postback(event):
                     )
                 )
         except Exception as e:
-            print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+            print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
         return
     
     elif data.startswith('select_sheet_'):
@@ -560,7 +560,7 @@ def handle_postback(event):
                     )
                 )
         except Exception as e:
-            print(f"[ERROR] handle_postback: reply_message送信時に例外発生: {e}")
+            print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
         return
     
     elif data.startswith('show_more_sheets_'):
@@ -640,7 +640,7 @@ def handle_postback(event):
                     )
                 )
         except Exception as e:
-            print(f"[ERROR] handle_postback: 既存シート一覧取得時に例外発生: {e}")
+            print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
             # エラーの場合は手動入力にフォールバック
             doc_name = "見積書" if doc_type == 'estimate' else "請求書"
             with ApiClient(configuration) as api_client:
@@ -719,7 +719,7 @@ def handle_registration(event, session, text):
                     line_bot_api = MessagingApi(api_client)
                     if auth_url:
                         print(f"[DEBUG] handle_registration: 認証URL送信前 reply_token={event.reply_token}, event={event}")
-                        line_bot_api.reply_message(
+                        line_bot_api.push_message(
                             PushMessageRequest(
                                 to=user_id,
                                 messages=[TextMessage(text="🔐 Google認証が完了していません。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
@@ -728,14 +728,14 @@ def handle_registration(event, session, text):
                         print(f"[DEBUG] handle_registration: 認証URL送信完了")
                     else:
                         print(f"[DEBUG] handle_registration: 認証URL生成失敗 reply_token={event.reply_token}, event={event}")
-                        line_bot_api.reply_message(
+                        line_bot_api.push_message(
                             PushMessageRequest(
                                 to=user_id,
                                 messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
                             )
                         )
             except Exception as e:
-                print(f"[ERROR] handle_registration: 認証URL送信時に例外発生: {e}")
+                print(f"[ERROR] handle_registration: push_message送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
             return
@@ -764,7 +764,7 @@ def handle_registration(event, session, text):
                         messages=[TextMessage(text=f"✅ 会社名を「{text}」に設定しました。\n\n次に住所を入力してください。\n例：東京都千代田区丸の内1-1-1")]
                     )
                 )
-                print(f"[DEBUG] handle_registration: 住所入力メッセージ送信完了 (push_message)")
+                print(f"[DEBUG] handle_registration: 住所入力メッセージ送信完了")
         except Exception as e:
             print(f"[ERROR] handle_registration: push_message送信時に例外発生: {e}")
             import traceback
@@ -787,7 +787,7 @@ def handle_registration(event, session, text):
                     )
                 )
         except Exception as e:
-            print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
+            print(f"[ERROR] handle_registration: push_message送信時に例外発生: {e}")
     
     elif step == 'bank_account':
         print(f"[DEBUG] handle_registration: step=bank_account, text={text}, session={session}")
@@ -819,7 +819,7 @@ def handle_registration(event, session, text):
             print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
             show_main_menu(event)
         except Exception as e:
-            print(f"[ERROR] handle_registration: reply_message送信時に例外発生: {e}")
+            print(f"[ERROR] handle_registration: push_message送信時に例外発生: {e}")
 
 def handle_menu(event, session, text):
     """メインメニューの処理"""
@@ -859,7 +859,7 @@ def handle_menu(event, session, text):
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_menu: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_menu: push_message送信時に例外発生: {e}")
         else:
             # 未認証の場合は認証から開始
             session_manager.update_session(event.source.user_id, {
@@ -878,19 +878,19 @@ def handle_menu(event, session, text):
                             )
                         )
                 except Exception as e:
-                    print(f"[ERROR] handle_menu: reply_message送信時に例外発生: {e}")
+                    print(f"[ERROR] handle_menu: push_message送信時に例外発生: {e}")
             else:
                 try:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
+                        line_bot_api.push_message(
                             PushMessageRequest(
                                 to=user_id,
                                 messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
                             )
                         )
                 except Exception as e:
-                    print(f"[ERROR] handle_menu: reply_message送信時に例外発生: {e}")
+                    print(f"[ERROR] handle_menu: push_message送信時に例外発生: {e}")
     
     else:
         show_main_menu(event)
@@ -1044,7 +1044,7 @@ def handle_document_creation(event, session, text):
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
+                    line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
                             messages=[TextMessage(text="🔐 Google認証が失われています。再度認証を完了してください：\n\n" + auth_url)]
@@ -1052,7 +1052,7 @@ def handle_document_creation(event, session, text):
                     )
                 print(f"[DEBUG] handle_document_creation: 認証URL送信完了")
             except Exception as e:
-                print(f"[ERROR] handle_document_creation: 認証URL送信時に例外発生: {e}")
+                print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
         else:
@@ -1060,14 +1060,14 @@ def handle_document_creation(event, session, text):
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
+                    line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
                             messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_document_creation: 認証URL生成失敗時の送信で例外発生: {e}")
+                print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
         return
@@ -1086,7 +1086,7 @@ def handle_document_creation(event, session, text):
                 line_bot_api = MessagingApi(api_client)
                 if auth_url:
                     print(f"[DEBUG] handle_document_creation: 認証URL送信前 reply_token={event.reply_token}, event={event}")
-                    line_bot_api.reply_message(
+                    line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
                             messages=[TextMessage(text="🔐 書類を作成するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
@@ -1095,14 +1095,14 @@ def handle_document_creation(event, session, text):
                     print(f"[DEBUG] handle_document_creation: 認証URL送信完了")
                 else:
                     print(f"[DEBUG] handle_document_creation: 認証URL生成失敗 reply_token={event.reply_token}, event={event}")
-                    line_bot_api.reply_message(
+                    line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
                             messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
                         )
                     )
         except Exception as e:
-            print(f"[ERROR] handle_document_creation: 認証URL送信時に例外発生: {e}")
+            print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
             import traceback
             traceback.print_exc()
         return
@@ -1122,14 +1122,14 @@ def handle_document_creation(event, session, text):
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
+                    line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
                             messages=[TextMessage(text=f"📄{doc_name}の新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
             return
         else:
             # 既存シートIDとして処理
@@ -1142,14 +1142,14 @@ def handle_document_creation(event, session, text):
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
+                    line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
                             messages=[TextMessage(text=f"📄{doc_name}の既存シートに追加します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
             return
 
     # 請求書シート選択ステップ（既存の処理）
@@ -1163,14 +1163,14 @@ def handle_document_creation(event, session, text):
             print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
+                line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
                         messages=[TextMessage(text="会社名を入力してください。")]
                     )
                 )
         except Exception as e:
-            print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+            print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
             import traceback
             traceback.print_exc()
         return
@@ -1182,14 +1182,14 @@ def handle_document_creation(event, session, text):
                 print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
+                    line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
                             messages=[TextMessage(text="次に宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
         elif text == "編集する":
@@ -1198,14 +1198,14 @@ def handle_document_creation(event, session, text):
                 print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
+                    line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
                             messages=[TextMessage(text="新しい会社名を入力してください。")]
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
         else:
@@ -1222,16 +1222,16 @@ def handle_document_creation(event, session, text):
                     print(f"[DEBUG] handle_document_creation: MessagingApi作成前")
                     line_bot_api = MessagingApi(api_client)
                     print(f"[DEBUG] handle_document_creation: MessagingApi作成後")
-                    print(f"[DEBUG] handle_document_creation: reply_message呼び出し前")
-                    line_bot_api.reply_message(
+                    print(f"[DEBUG] handle_document_creation: push_message呼び出し前")
+                    line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
                             messages=[TextMessage(text=f"✅ 会社名を「{text}」に設定しました。\n\n次に宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                         )
                     )
-                    print(f"[DEBUG] handle_document_creation: reply_message呼び出し後")
+                    print(f"[DEBUG] handle_document_creation: push_message呼び出し後")
             except Exception as e:
-                print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
 
@@ -1244,14 +1244,14 @@ def handle_document_creation(event, session, text):
             print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
+                line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
                         messages=[TextMessage(text=f"✅ 宛名を「{text}」に設定しました。\n\n次に品目を入力してください。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000\n\n最大10件まで入力できます。")]
                     )
                 )
         except Exception as e:
-            print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+            print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
             import traceback
             traceback.print_exc()
 
@@ -1275,14 +1275,14 @@ def handle_document_creation(event, session, text):
                     print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
+                        line_bot_api.push_message(
                             PushMessageRequest(
                                 to=user_id,
                                 messages=[TextMessage(text="品目が入力されていません。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000")]
                             )
                         )
                 except Exception as e:
-                    print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                    print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                     import traceback
                     traceback.print_exc()
                 return
@@ -1293,14 +1293,14 @@ def handle_document_creation(event, session, text):
                 try:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
+                        line_bot_api.push_message(
                             PushMessageRequest(
                                 to=user_id,
                                 messages=[TextMessage(text=flex_json)]
                             )
                         )
                 except Exception as e:
-                    print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                    print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                     import traceback
                     traceback.print_exc()
                 session_manager.update_session(user_id, {'step': 'confirm'})
@@ -1310,14 +1310,14 @@ def handle_document_creation(event, session, text):
                 try:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
+                        line_bot_api.push_message(
                             PushMessageRequest(
                                 to=user_id,
                                 messages=[TextMessage(text="✅ 品目の入力が完了しました。\n\n次に支払い期日を入力してください。\n形式：YYYY-MM-DD\n例：2024-01-31")]
                             )
                         )
                 except Exception as e:
-                    print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                    print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                     import traceback
                     traceback.print_exc()
                 session_manager.update_session(user_id, {'step': 'due_date'})
@@ -1331,14 +1331,14 @@ def handle_document_creation(event, session, text):
                     print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
+                        line_bot_api.push_message(
                             PushMessageRequest(
                                 to=user_id,
                                 messages=[TextMessage(text="品目が入力されていません。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000")]
                             )
                         )
                 except Exception as e:
-                    print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                    print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                     import traceback
                     traceback.print_exc()
                 return
@@ -1348,14 +1348,14 @@ def handle_document_creation(event, session, text):
                     print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
+                        line_bot_api.push_message(
                             PushMessageRequest(
                                 to=user_id,
                                 messages=[TextMessage(text="✅ 品目の入力が完了しました。\n\n書類の生成を開始します...")]
                             )
                         )
                 except Exception as e:
-                    print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                    print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                     import traceback
                     traceback.print_exc()
                 session_manager.update_session(user_id, {'step': 'generate'})
@@ -1366,14 +1366,14 @@ def handle_document_creation(event, session, text):
                     print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
+                        line_bot_api.push_message(
                             PushMessageRequest(
                                 to=user_id,
                                 messages=[TextMessage(text="✅ 品目の入力が完了しました。\n\n次に支払い期日を入力してください。\n形式：YYYY-MM-DD\n例：2024-01-31")]
                             )
                         )
                 except Exception as e:
-                    print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                    print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                     import traceback
                     traceback.print_exc()
                 session_manager.update_session(user_id, {'step': 'due_date'})
@@ -1399,14 +1399,14 @@ def handle_document_creation(event, session, text):
                 try:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
+                        line_bot_api.push_message(
                             PushMessageRequest(
                                 to=user_id,
                                 messages=[TextMessage(text=response_text)]
                             )
                         )
                 except Exception as e:
-                    print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                    print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                     import traceback
                     traceback.print_exc()
             else:
@@ -1414,14 +1414,14 @@ def handle_document_creation(event, session, text):
                 try:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
+                        line_bot_api.push_message(
                             PushMessageRequest(
                                 to=user_id,
                                 messages=[TextMessage(text="形式が正しくありません。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000")]
                             )
                         )
                 except Exception as e:
-                    print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                    print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                     import traceback
                     traceback.print_exc()
         except ValueError:
@@ -1429,18 +1429,18 @@ def handle_document_creation(event, session, text):
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
+                    line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
                             messages=[TextMessage(text="数量と単価は数字で入力してください。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000")]
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
         except Exception as e:
-            print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+            print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
             import traceback
             traceback.print_exc()
 
@@ -1457,14 +1457,14 @@ def handle_document_creation(event, session, text):
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
+                    line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
                             messages=[TextMessage(text=flex_json)]
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
             session_manager.update_session(user_id, {'step': 'confirm'})
@@ -1474,14 +1474,14 @@ def handle_document_creation(event, session, text):
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
+                    line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
                             messages=[TextMessage(text="日付の形式が正しくありません。\n\n形式：YYYY-MM-DD\n例：2024-01-31")]
                         )
                     )
             except Exception as e:
-                print(f"[ERROR] handle_document_creation: reply_message送信時に例外発生: {e}")
+                print(f"[ERROR] handle_document_creation: push_message送信時に例外発生: {e}")
                 import traceback
                 traceback.print_exc()
         return
@@ -1564,7 +1564,7 @@ def generate_document(event, session):
                     )
                 )
         except Exception as e:
-            print(f"[ERROR] generate_document: reply_message送信時に例外発生: {e}")
+            print(f"[ERROR] generate_document: push_message送信時に例外発生: {e}")
         
         # PDFファイルの一時ファイル削除
         # if pdf_path and os.path.exists(pdf_path):
