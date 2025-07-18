@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from flask import Flask, request, abort, redirect, url_for, send_file, after_this_request
 from linebot.v3.messaging import (
-    MessagingApi, Configuration, ApiClient, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage
+    MessagingApi, Configuration, ApiClient, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse
 )
 from linebot.v3.webhooks.models import MessageEvent, PostbackEvent
 from linebot.v3.webhook import WebhookHandler
@@ -429,69 +429,29 @@ def handle_postback(event):
                     'creation_method': 'new_sheet'
                 })
                 return
-            from linebot.v3.messaging import FlexMessage
-            flex_contents = {
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "md",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": f"📄{doc_name}の既存シートを選択",
-                            "weight": "bold",
-                            "size": "lg",
-                            "color": "#333333"
-                        },
-                        {
-                            "type": "text",
-                            "text": "追加したいシートを選んでください",
-                            "size": "sm",
-                            "color": "#666666",
-                            "wrap": True
-                        },
-                        {
-                            "type": "separator",
-                            "margin": "lg"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "spacing": "sm",
-                            "contents": [
-                                *[
-                                    {
-                                        "type": "button",
-                                        "action": {
-                                            "type": "postback",
-                                            "label": f"{sheet['name'][:18] + '...' if len(sheet['name']) > 20 else sheet['name']}",
-                                            "data": f"select_sheet_{sheet['id']}"
-                                        },
-                                        "style": "secondary",
-                                        "color": "#2196F3"
-                                    }
-                                    for sheet in spreadsheets[:12]
-                                ],
-                                {
-                                    "type": "button",
-                                    "action": {
-                                        "type": "postback",
-                                        "label": "🆕 新規シートを作成",
-                                        "data": f"new_sheet_{doc_type}"
-                                    },
-                                    "style": "primary",
-                                    "color": "#4CAF50"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }
-            flex_message = FlexMessage(
-                altText=f"{doc_name}の既存シート選択",
-                contents=flex_contents
-            )
+            # FlexMessageの代わりにテキスト形式で表示
+            sheet_list_text = f"📄{doc_name}の既存シート一覧（{len(spreadsheets)}件）：\n\n"
+            for i, sheet in enumerate(spreadsheets[:10], 1):
+                # 日付を整形
+                from datetime import datetime
+                modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
+                formatted_date = modified_time.strftime('%Y/%m/%d %H:%M')
+                
+                sheet_list_text += f"{i}. {sheet['name']}\n"
+                sheet_list_text += f"   最終更新: {formatted_date}\n"
+                sheet_list_text += f"   ID: {sheet['id']}\n\n"
+            
+            sheet_list_text += "使用したいスプレッドシートのIDを入力してください。\n"
+            sheet_list_text += "（新規作成の場合は「新規作成」と入力してください）"
+            
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
+                        messages=[TextMessage(text=sheet_list_text)]
+                    )
+                )
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.push_message(
