@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from flask import Flask, request, abort, redirect, url_for, send_file, after_this_request
 from linebot.v3.messaging import (
-    MessagingApi, Configuration, ApiClient, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse
+    MessagingApi, Configuration, ApiClient, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage
 )
 from linebot.v3.webhooks.models import MessageEvent, PostbackEvent
 from linebot.v3.webhook import WebhookHandler
@@ -429,27 +429,84 @@ def handle_postback(event):
                     'creation_method': 'new_sheet'
                 })
                 return
-            # FlexMessageの代わりにテキスト形式で表示
-            sheet_list_text = f"📄{doc_name}の既存シート一覧（{len(spreadsheets)}件）：\n\n"
-            for i, sheet in enumerate(spreadsheets[:10], 1):
-                # 日付を整形
-                from datetime import datetime
-                modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
-                formatted_date = modified_time.strftime('%Y/%m/%d %H:%M')
-                
-                sheet_list_text += f"{i}. {sheet['name']}\n"
-                sheet_list_text += f"   最終更新: {formatted_date}\n"
-                sheet_list_text += f"   ID: {sheet['id']}\n\n"
+            # FlexMessageで既存シート一覧を表示
+            from linebot.v3.messaging import FlexMessage
             
-            sheet_list_text += "使用したいスプレッドシートのIDを入力してください。\n"
-            sheet_list_text += "（新規作成の場合は「新規作成」と入力してください）"
+            # ボタンコンポーネントを作成
+            button_components = []
+            for sheet in spreadsheets[:10]:  # 最大10件まで表示
+                button_components.append({
+                    "type": "button",
+                    "action": {
+                        "type": "postback",
+                        "label": sheet['name'][:20] + ('...' if len(sheet['name']) > 20 else ''),
+                        "data": f"select_sheet_{sheet['id']}"
+                    },
+                    "style": "primary",
+                    "color": "#2196F3",
+                    "margin": "sm"
+                })
+            
+            # 新規作成ボタンを追加
+            button_components.append({
+                "type": "button",
+                "action": {
+                    "type": "postback",
+                    "label": "🆕 新規シートを作成",
+                    "data": f"new_sheet_{doc_type}"
+                },
+                "style": "primary",
+                "color": "#4CAF50",
+                "margin": "sm"
+            })
+            
+            # FlexMessageの構造を作成
+            flex_contents = {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "md",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": f"📄{doc_name}の作成",
+                            "weight": "bold",
+                            "size": "lg",
+                            "color": "#333333"
+                        },
+                        {
+                            "type": "text",
+                            "text": "使用するシートを選択してください。",
+                            "size": "sm",
+                            "color": "#666666",
+                            "wrap": True
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "spacing": "sm",
+                            "contents": button_components
+                        }
+                    ]
+                }
+            }
+            
+            flex_message = FlexMessage(
+                altText=f"{doc_name}の既存シート選択",
+                contents=flex_contents
+            )
             
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[TextMessage(text=sheet_list_text)]
+                        messages=[flex_message]
                     )
                 )
             with ApiClient(configuration) as api_client:
