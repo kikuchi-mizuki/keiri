@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from flask import Flask, request, abort, redirect, url_for, send_file, after_this_request
 from linebot.v3.messaging import (
-    MessagingApi, Configuration, ApiClient, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage
+    MessagingApi, Configuration, ApiClient, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse
 )
 from linebot.v3.webhooks.models import MessageEvent, PostbackEvent
 from linebot.v3.webhook import WebhookHandler
