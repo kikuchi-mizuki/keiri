@@ -209,9 +209,9 @@ def handle_message(event):
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                    line_bot_api.push_message(
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text=f"{doc_label}を作成中です…")]
                         )
                     )
@@ -224,9 +224,9 @@ def handle_message(event):
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                    line_bot_api.push_message(
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="品目の修正を行います。続けて品目を入力してください。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000\n\n完了したら「完了」と入力してください。")]
                         )
                     )
@@ -245,9 +245,9 @@ def handle_message(event):
                 print(f"[DEBUG] handle_message: reply_token={event.reply_token}, event={event}")
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                    line_bot_api.push_message(
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="👩‍💼LINE見積書・請求書Botへようこそ！\n\nまずはGoogle認証を行ってください。\n以下のリンクからGoogle Driveへのアクセスを許可してください：\n\n" + auth_url)]
                         )
                     )
@@ -257,9 +257,9 @@ def handle_message(event):
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                    line_bot_api.push_message(
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="👩‍💼LINE見積書・請求書Botへようこそ！\n\nGoogle認証URLの生成に失敗しました。しばらく時間をおいて再度お試しください。")]
                         )
                     )
@@ -306,9 +306,9 @@ def handle_postback(event):
                 print(f"[DEBUG] handle_postback: reply_token={event.reply_token}, event={event}")
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                    line_bot_api.push_message(
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="会社情報の編集を開始します。\n\n会社名を教えてください。")]
                         )
                     )
@@ -325,9 +325,9 @@ def handle_postback(event):
                 try:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                        line_bot_api.push_message(
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="🔐 会社情報を編集するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
                             )
                         )
@@ -337,9 +337,9 @@ def handle_postback(event):
                 try:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
+                        line_bot_api.push_message(
                             ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                                to=user_id,
                                 messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
                             )
                         )
@@ -355,9 +355,9 @@ def handle_postback(event):
         try:
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
                         messages=[TextMessage(text=f"{doc_label}を作成中です…")]
                     )
                 )
@@ -371,9 +371,9 @@ def handle_postback(event):
         try:
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
                         messages=[TextMessage(text="品目の修正を行います。続けて品目を入力してください。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000\n\n完了したら「完了」と入力してください。")]
                     )
                 )
@@ -406,9 +406,9 @@ def handle_postback(event):
                 if auth_url:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                        line_bot_api.push_message(
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="🔐 既存シートを確認するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
                             )
                         )
@@ -418,9 +418,9 @@ def handle_postback(event):
             if not spreadsheets:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                    line_bot_api.push_message(
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text=f"📄{doc_name}の既存シートが見つかりませんでした。\n\n新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                         )
                     )
@@ -494,9 +494,9 @@ def handle_postback(event):
             )
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
                         messages=[flex_message]
                     )
                 )
@@ -505,10 +505,10 @@ def handle_postback(event):
             doc_name = "見積書" if doc_type == 'estimate' else "請求書"
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[TextMessage(text=f"📄{doc_name}の既存シート選択を開始します。\n\n既存の{doc_name}スプレッドシートIDを入力してください。\n\n（新規作成の場合は「新規作成」と入力してください）")]
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
+                        messages=[TextMessage(text=f"��{doc_name}の既存シート選択を開始します。\n\n既存の{doc_name}スプレッドシートIDを入力してください。\n\n（新規作成の場合は「新規作成」と入力してください）")]
                     )
                 )
         return
@@ -527,9 +527,9 @@ def handle_postback(event):
         try:
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
                         messages=[TextMessage(text=f"📄{doc_name}の新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                     )
                 )
@@ -553,9 +553,9 @@ def handle_postback(event):
         try:
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
                         messages=[TextMessage(text=f"📄{doc_name}の既存シートに追加します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                     )
                 )
@@ -587,9 +587,9 @@ def handle_postback(event):
                 if auth_url:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                        line_bot_api.push_message(
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="🔐 既存シートを確認するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
                             )
                         )
@@ -603,9 +603,9 @@ def handle_postback(event):
                 # 既存シートがない場合
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                    line_bot_api.push_message(
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text=f"📄{doc_name}の既存シートが見つかりませんでした。\n\n新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                         )
                     )
@@ -633,9 +633,9 @@ def handle_postback(event):
             
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
                         messages=[TextMessage(text=sheet_list_text)]
                     )
                 )
@@ -645,9 +645,9 @@ def handle_postback(event):
             doc_name = "見積書" if doc_type == 'estimate' else "請求書"
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
                         messages=[TextMessage(text=f"📄{doc_name}の既存シート選択を開始します。\n\n既存の{doc_name}スプレッドシートIDを入力してください。\n\n（新規作成の場合は「新規作成」と入力してください）")]
                     )
                 )
@@ -720,8 +720,8 @@ def handle_registration(event, session, text):
                     if auth_url:
                         print(f"[DEBUG] handle_registration: 認証URL送信前 reply_token={event.reply_token}, event={event}")
                         line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="🔐 Google認証が完了していません。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
                             )
                         )
@@ -729,8 +729,8 @@ def handle_registration(event, session, text):
                     else:
                         print(f"[DEBUG] handle_registration: 認証URL生成失敗 reply_token={event.reply_token}, event={event}")
                         line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
                             )
                         )
@@ -780,9 +780,9 @@ def handle_registration(event, session, text):
             print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
                         messages=[TextMessage(text=f"✅ 住所を「{text}」に設定しました。\n\n次に振込先銀行口座を教えてください。\n（例：○○銀行 ○○支店 普通 1234567）")]
                     )
                 )
@@ -852,9 +852,9 @@ def handle_menu(event, session, text):
                 print(f"[DEBUG] handle_menu: reply_token={event.reply_token}, event={event}")
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                    line_bot_api.push_message(
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="会社情報の編集を開始します。\n\n会社名を教えてください。")]
                         )
                     )
@@ -871,9 +871,9 @@ def handle_menu(event, session, text):
                 try:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                        line_bot_api.push_message(
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="🔐 会社情報を編集するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
                             )
                         )
@@ -884,8 +884,8 @@ def handle_menu(event, session, text):
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
                         line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
                             )
                         )
@@ -927,8 +927,8 @@ def show_main_menu(event):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
+                PushMessageRequest(
+                    to=user_id,
                     messages=[buttons_template]
                 )
             )
@@ -979,8 +979,8 @@ def show_document_creation_menu(event, doc_type):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
+                PushMessageRequest(
+                    to=user_id,
                     messages=[buttons_template]
                 )
             )
@@ -1044,8 +1044,8 @@ def handle_document_creation(event, session, text):
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="🔐 Google認証が失われています。再度認証を完了してください：\n\n" + auth_url)]
                         )
                     )
@@ -1060,8 +1060,8 @@ def handle_document_creation(event, session, text):
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
                         )
                     )
@@ -1086,8 +1086,8 @@ def handle_document_creation(event, session, text):
                 if auth_url:
                     print(f"[DEBUG] handle_document_creation: 認証URL送信前 reply_token={event.reply_token}, event={event}")
                     line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="🔐 書類を作成するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
                         )
                     )
@@ -1095,8 +1095,8 @@ def handle_document_creation(event, session, text):
                 else:
                     print(f"[DEBUG] handle_document_creation: 認証URL生成失敗 reply_token={event.reply_token}, event={event}")
                     line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。")]
                         )
                     )
@@ -1122,8 +1122,8 @@ def handle_document_creation(event, session, text):
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text=f"📄{doc_name}の新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                         )
                     )
@@ -1142,8 +1142,8 @@ def handle_document_creation(event, session, text):
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text=f"📄{doc_name}の既存シートに追加します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                         )
                     )
@@ -1163,8 +1163,8 @@ def handle_document_creation(event, session, text):
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
+                    PushMessageRequest(
+                        to=user_id,
                         messages=[TextMessage(text="会社名を入力してください。")]
                     )
                 )
@@ -1182,8 +1182,8 @@ def handle_document_creation(event, session, text):
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="次に宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                         )
                     )
@@ -1198,8 +1198,8 @@ def handle_document_creation(event, session, text):
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="新しい会社名を入力してください。")]
                         )
                     )
@@ -1223,8 +1223,8 @@ def handle_document_creation(event, session, text):
                     print(f"[DEBUG] handle_document_creation: MessagingApi作成後")
                     print(f"[DEBUG] handle_document_creation: reply_message呼び出し前")
                     line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text=f"✅ 会社名を「{text}」に設定しました。\n\n次に宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                         )
                     )
@@ -1244,8 +1244,8 @@ def handle_document_creation(event, session, text):
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
+                    PushMessageRequest(
+                        to=user_id,
                         messages=[TextMessage(text=f"✅ 宛名を「{text}」に設定しました。\n\n次に品目を入力してください。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000\n\n最大10件まで入力できます。")]
                     )
                 )
@@ -1275,8 +1275,8 @@ def handle_document_creation(event, session, text):
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
                         line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="品目が入力されていません。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000")]
                             )
                         )
@@ -1293,8 +1293,8 @@ def handle_document_creation(event, session, text):
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
                         line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text=flex_json)]
                             )
                         )
@@ -1310,8 +1310,8 @@ def handle_document_creation(event, session, text):
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
                         line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="✅ 品目の入力が完了しました。\n\n次に支払い期日を入力してください。\n形式：YYYY-MM-DD\n例：2024-01-31")]
                             )
                         )
@@ -1331,8 +1331,8 @@ def handle_document_creation(event, session, text):
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
                         line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="品目が入力されていません。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000")]
                             )
                         )
@@ -1348,8 +1348,8 @@ def handle_document_creation(event, session, text):
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
                         line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="✅ 品目の入力が完了しました。\n\n書類の生成を開始します...")]
                             )
                         )
@@ -1366,8 +1366,8 @@ def handle_document_creation(event, session, text):
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
                         line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="✅ 品目の入力が完了しました。\n\n次に支払い期日を入力してください。\n形式：YYYY-MM-DD\n例：2024-01-31")]
                             )
                         )
@@ -1399,8 +1399,8 @@ def handle_document_creation(event, session, text):
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
                         line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text=response_text)]
                             )
                         )
@@ -1414,8 +1414,8 @@ def handle_document_creation(event, session, text):
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
                         line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
+                            PushMessageRequest(
+                                to=user_id,
                                 messages=[TextMessage(text="形式が正しくありません。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000")]
                             )
                         )
@@ -1429,8 +1429,8 @@ def handle_document_creation(event, session, text):
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="数量と単価は数字で入力してください。\n\n形式：品目名,数量,単価\n例：Webサイト制作,1,100000")]
                         )
                     )
@@ -1457,8 +1457,8 @@ def handle_document_creation(event, session, text):
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text=flex_json)]
                         )
                     )
@@ -1474,8 +1474,8 @@ def handle_document_creation(event, session, text):
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
+                        PushMessageRequest(
+                            to=user_id,
                             messages=[TextMessage(text="日付の形式が正しくありません。\n\n形式：YYYY-MM-DD\n例：2024-01-31")]
                         )
                     )
