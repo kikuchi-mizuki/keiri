@@ -429,100 +429,27 @@ def handle_postback(event):
                     'creation_method': 'new_sheet'
                 })
                 return
-            # FlexMessageで既存シート一覧を表示（横並びボタン）
-            # LINE Bot SDK v3の正しいFlexMessage構造
-            from linebot.v3.messaging import FlexMessage
-            
-            # ボタンコンポーネントを作成（横並び）
-            button_components = []
-            for sheet in spreadsheets[:6]:  # 最大6件まで表示
-                button_components.append({
-                    "type": "button",
-                    "action": {
-                        "type": "postback",
-                        "label": f"{sheet['name'][:12]}{'...' if len(sheet['name']) > 12 else ''}",
-                        "data": f"select_sheet_{sheet['id']}"
-                    },
-                    "style": "primary",
-                    "color": "#2196F3",
-                    "flex": 1,
-                    "margin": "xs"
-                })
-            
-            # 新規作成ボタンを追加
-            button_components.append({
-                "type": "button",
-                "action": {
-                    "type": "postback",
-                    "label": "🆕 新規作成",
-                    "data": f"new_sheet_{doc_type}"
-                },
-                "style": "primary",
-                "color": "#4CAF50",
-                "flex": 1,
-                "margin": "xs"
-            })
-            
-            # FlexMessageの構造を作成（LINE Bot SDK v3仕様）
-            flex_contents = {
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "md",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": f"📄{doc_name}の既存シート一覧（{len(spreadsheets)}件）",
-                            "weight": "bold",
-                            "size": "lg",
-                            "color": "#333333"
-                        },
-                        {
-                            "type": "text",
-                            "text": "使用するシートを選択してください",
-                            "size": "sm",
-                            "color": "#666666",
-                            "wrap": True
-                        },
-                        {
-                            "type": "separator",
-                            "margin": "lg"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "spacing": "xs",
-                            "contents": button_components[:3]  # 最初の3つを横並び
-                        }
-                    ]
-                }
-            }
-            
-            # 4つ目以降がある場合は追加の行を作成
-            if len(button_components) > 3:
-                additional_buttons = []
-                for i in range(3, min(6, len(button_components))):
-                    additional_buttons.append(button_components[i])
+            # テキスト形式で既存シート一覧を表示（FlexMessageの代わり）
+            sheet_list_text = f"📄{doc_name}の既存シート一覧（{len(spreadsheets)}件）：\n\n"
+            for i, sheet in enumerate(spreadsheets[:10], 1):
+                # 日付を整形
+                from datetime import datetime
+                modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
+                formatted_date = modified_time.strftime('%Y/%m/%d %H:%M')
                 
-                flex_contents["body"]["contents"].append({
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "xs",
-                    "contents": additional_buttons
-                })
+                sheet_list_text += f"{i}. {sheet['name']}\n"
+                sheet_list_text += f"   最終更新: {formatted_date}\n"
+                sheet_list_text += f"   ID: {sheet['id']}\n\n"
             
-            flex_message = FlexMessage(
-                altText=f"{doc_name}の既存シート選択",
-                contents=flex_contents
-            )
+            sheet_list_text += "使用したいスプレッドシートのIDを入力してください。\n"
+            sheet_list_text += "（新規作成の場合は「新規作成」と入力してください）"
             
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[flex_message]
+                        messages=[TextMessage(text=sheet_list_text)]
                     )
                 )
         except Exception as e:
