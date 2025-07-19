@@ -100,8 +100,11 @@ class DocumentGenerator:
                 is_first = False
                 if not spreadsheet_id:
                     # 1回目：テンプレートから新規作成
+                    # 会社名を取得してファイル名に含める
+                    user_info = self.session_manager.get_user_info(user_id) or {}
+                    company_name = session_data.get('company_name', user_info.get('company_name', ''))
                     spreadsheet_id = self.sheets_service.copy_template(
-                        credentials, user_id, document_type
+                        credentials, user_id, document_type, company_name=company_name
                     )
                     # 不要なタブを削除
                     if document_type == 'estimate':

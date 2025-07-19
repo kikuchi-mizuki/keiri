@@ -1,6 +1,7 @@
 import os
 import logging
 import time
+import re
 from datetime import datetime
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -26,7 +27,7 @@ class GoogleSheetsService:
             self.service = build('sheets', 'v4', credentials=credentials)
         return self.service
     
-    def copy_template(self, credentials, user_id, document_type):
+    def copy_template(self, credentials, user_id, document_type, company_name=None):
         """テンプレートをコピー"""
         try:
             drive_service = build('drive', 'v3', credentials=credentials)
@@ -35,8 +36,19 @@ class GoogleSheetsService:
                 template_id = self.invoice_spreadsheet_id
             else:
                 template_id = self.template_spreadsheet_id
+            
+            # 会社名を含むファイル名を生成
+            if company_name:
+                # 会社名をファイル名に含める（特殊文字を除去）
+                safe_company_name = re.sub(r'[^\w\s-]', '', company_name).strip()
+                safe_company_name = re.sub(r'[-\s]+', '-', safe_company_name)
+                doc_name = "見積書" if document_type == 'estimate' else "請求書"
+                file_name = f"{safe_company_name}_{doc_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            else:
+                file_name = f"{document_type}_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
             copy_metadata = {
-                'name': f"{document_type}_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                'name': file_name,
                 'parents': ['root']  # ユーザーのルートフォルダに保存
             }
             copied_file = drive_service.files().copy(
@@ -44,7 +56,7 @@ class GoogleSheetsService:
                 body=copy_metadata
             ).execute()
             spreadsheet_id = copied_file['id']
-            logger.info(f"Template copied: {spreadsheet_id}")
+            logger.info(f"Template copied: {spreadsheet_id} with name: {file_name}")
             return spreadsheet_id
         except HttpError as error:
             logger.error(f"Template copy error: {error}")
@@ -304,18 +316,24 @@ class GoogleSheetsService:
             logger.error(f"PDF export error: {error}")
             raise 
 
-    def list_spreadsheets_by_type(self, credentials, document_type, max_results=10):
-        """Google Drive上の指定タイプのスプレッドシート一覧を取得"""
+    def list_spreadsheets_by_type(self, credentials, document_type, max_results=10, user_id=None):
+        """Google Drive上の指定タイプのスプレッドシート一覧を取得（botで作成したもののみ）"""
         try:
             drive_service = build('drive', 'v3', credentials=credentials)
             
             # ドキュメントタイプに応じて検索クエリを設定
             if document_type == 'estimate':
-                # 見積書の場合：ファイル名に「見積書」または「estimate」が含まれるものを検索
-                query = "mimeType='application/vnd.google-apps.spreadsheet' and (name contains '見積書' or name contains 'estimate') and trashed = false"
+                # 見積書の場合：ファイル名に「見積書」が含まれ、かつユーザーIDまたは会社名パターンが含まれるものを検索
+                if user_id:
+                    query = f"mimeType='application/vnd.google-apps.spreadsheet' and name contains '見積書' and (name contains '{user_id}' or name contains '_見積書_') and trashed = false"
+                else:
+                    query = "mimeType='application/vnd.google-apps.spreadsheet' and name contains '見積書' and (name contains '_見積書_' or name contains 'estimate_') and trashed = false"
             elif document_type == 'invoice':
-                # 請求書の場合：ファイル名に「請求書」または「invoice」が含まれるものを検索
-                query = "mimeType='application/vnd.google-apps.spreadsheet' and (name contains '請求書' or name contains 'invoice') and trashed = false"
+                # 請求書の場合：ファイル名に「請求書」が含まれ、かつユーザーIDまたは会社名パターンが含まれるものを検索
+                if user_id:
+                    query = f"mimeType='application/vnd.google-apps.spreadsheet' and name contains '請求書' and (name contains '{user_id}' or name contains '_請求書_') and trashed = false"
+                else:
+                    query = "mimeType='application/vnd.google-apps.spreadsheet' and name contains '請求書' and (name contains '_請求書_' or name contains 'invoice_') and trashed = false"
             else:
                 # デフォルトは全てのスプレッドシート
                 query = "mimeType='application/vnd.google-apps.spreadsheet' and trashed = false"
@@ -339,7 +357,7 @@ class GoogleSheetsService:
                     'url': f"https://docs.google.com/spreadsheets/d/{file['id']}/edit"
                 })
             
-            logger.info(f"Found {len(formatted_files)} {document_type} spreadsheets")
+            logger.info(f"Found {len(formatted_files)} {document_type} spreadsheets created by bot")
             return formatted_files
             
         except Exception as e:

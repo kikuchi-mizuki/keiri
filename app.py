@@ -483,8 +483,8 @@ def show_sheet_list(user_id, doc_type, page=0):
                     )
             return
         
-        # 全件取得してページネーション
-        all_spreadsheets = google_sheets_service.list_spreadsheets_by_type(credentials, doc_type, max_results=100)
+        # 全件取得してページネーション（botで作成したシートのみ）
+        all_spreadsheets = google_sheets_service.list_spreadsheets_by_type(credentials, doc_type, max_results=100, user_id=user_id)
         doc_name = "見積書" if doc_type == 'estimate' else "請求書"
         
         if not all_spreadsheets:
