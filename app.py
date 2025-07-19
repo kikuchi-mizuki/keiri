@@ -429,19 +429,19 @@ def handle_postback(event):
                     'creation_method': 'new_sheet'
                 })
                 return
-            # 既存シート一覧をボタン形式で表示
+            # 既存シート一覧をQuickReply形式で表示
             from datetime import datetime
             
             # 最初のメッセージ：説明
             explanation_text = f"📄{doc_name}の作成を開始します。\n使用する{doc_name}シートを選択してください。"
             
-            # シート選択用のボタンを作成
-            actions = []
+            # QuickReplyアイテムを作成
+            quick_reply_items = []
             for i, sheet in enumerate(spreadsheets[:10], 1):
                 # シート名を短縮（長すぎる場合）
                 sheet_name = sheet['name']
-                if len(sheet_name) > 20:
-                    sheet_name = sheet_name[:17] + "..."
+                if len(sheet_name) > 15:
+                    sheet_name = sheet_name[:12] + "..."
                 
                 # 日付を整形
                 modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
@@ -450,33 +450,30 @@ def handle_postback(event):
                 # ボタンラベルを作成
                 button_label = f"{sheet_name} ({formatted_date})"
                 
-                actions.append(PostbackAction(
-                    label=button_label,
-                    data=f'select_sheet_{sheet["id"]}'
+                quick_reply_items.append(QuickReplyItem(
+                    action=PostbackAction(
+                        label=button_label,
+                        data=f'select_sheet_{sheet["id"]}'
+                    )
                 ))
             
             # 新規作成ボタンを追加
-            actions.append(PostbackAction(
-                label='🆕 新規作成',
-                data=f'new_sheet_{doc_type}'
+            quick_reply_items.append(QuickReplyItem(
+                action=PostbackAction(
+                    label='🆕 新規作成',
+                    data=f'new_sheet_{doc_type}'
+                )
             ))
             
-            # ボタンテンプレートを作成
-            buttons_template = TemplateMessage(
-                altText=f'{doc_name}シート選択',
-                template=ButtonsTemplate(
-                    title=f'📄 {doc_name}シート選択',
-                    text=explanation_text,
-                    actions=actions
-                )
-            )
+            # QuickReplyを作成
+            quick_reply = QuickReply(items=quick_reply_items)
             
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[TextMessage(text=explanation_text), buttons_template]
+                        messages=[TextMessage(text=explanation_text, quickReply=quick_reply)]
                     )
                 )
         except Exception as e:
@@ -595,19 +592,19 @@ def handle_postback(event):
                 })
                 return
             
-            # 全件をボタン形式で表示
+            # 全件をQuickReply形式で表示
             from datetime import datetime
             
             # 説明テキスト
             explanation_text = f"📄{doc_name}の作成を開始します。\n使用する{doc_name}シートを選択してください。"
             
-            # シート選択用のボタンを作成
-            actions = []
+            # QuickReplyアイテムを作成
+            quick_reply_items = []
             for i, sheet in enumerate(spreadsheets, 1):
                 # シート名を短縮（長すぎる場合）
                 sheet_name = sheet['name']
-                if len(sheet_name) > 20:
-                    sheet_name = sheet_name[:17] + "..."
+                if len(sheet_name) > 15:
+                    sheet_name = sheet_name[:12] + "..."
                 
                 # 日付を整形
                 modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
@@ -616,33 +613,30 @@ def handle_postback(event):
                 # ボタンラベルを作成
                 button_label = f"{sheet_name} ({formatted_date})"
                 
-                actions.append(PostbackAction(
-                    label=button_label,
-                    data=f'select_sheet_{sheet["id"]}'
+                quick_reply_items.append(QuickReplyItem(
+                    action=PostbackAction(
+                        label=button_label,
+                        data=f'select_sheet_{sheet["id"]}'
+                    )
                 ))
             
             # 新規作成ボタンを追加
-            actions.append(PostbackAction(
-                label='🆕 新規作成',
-                data=f'new_sheet_{doc_type}'
+            quick_reply_items.append(QuickReplyItem(
+                action=PostbackAction(
+                    label='🆕 新規作成',
+                    data=f'new_sheet_{doc_type}'
+                )
             ))
             
-            # ボタンテンプレートを作成
-            buttons_template = TemplateMessage(
-                altText=f'{doc_name}シート選択',
-                template=ButtonsTemplate(
-                    title=f'📄 {doc_name}シート選択',
-                    text=explanation_text,
-                    actions=actions
-                )
-            )
+            # QuickReplyを作成
+            quick_reply = QuickReply(items=quick_reply_items)
             
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[TextMessage(text=explanation_text), buttons_template]
+                        messages=[TextMessage(text=explanation_text, quickReply=quick_reply)]
                     )
                 )
         except Exception as e:
