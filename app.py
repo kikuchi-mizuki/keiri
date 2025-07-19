@@ -519,7 +519,6 @@ def show_sheet_list(user_id, doc_type, page=0):
             'creation_method': 'new_sheet'
         })
         return
-    
     elif data.startswith('next_page_'):
         # 次のページを表示
         parts = data.replace('next_page_', '').split('_')
@@ -528,7 +527,6 @@ def show_sheet_list(user_id, doc_type, page=0):
             page = int(parts[1])
             show_sheet_list(user_id, doc_type, page=page)
         return
-    
     elif data.startswith('new_sheet_'):
         # 新規シート作成
         doc_type = data.replace('new_sheet_', '')
@@ -552,7 +550,6 @@ def show_sheet_list(user_id, doc_type, page=0):
         except Exception as e:
             print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
         return
-    
     elif data.startswith('select_sheet_'):
         # 既存シートを選択
         spreadsheet_id = data.replace('select_sheet_', '')
@@ -578,9 +575,6 @@ def show_sheet_list(user_id, doc_type, page=0):
         except Exception as e:
             print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
         return
-    
-
-    
     elif data == 'cancel_creation':
         # 作成をキャンセル
         session_manager.update_session(user_id, {'state': 'menu', 'step': None})
