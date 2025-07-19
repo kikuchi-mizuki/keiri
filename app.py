@@ -429,33 +429,92 @@ def handle_postback(event):
                     'creation_method': 'new_sheet'
                 })
                 return
-            # ボタンテンプレートで既存シート一覧を表示
-            # 最大4つのボタンまで表示可能
-            actions = []
-            for sheet in spreadsheets[:3]:  # 最大3件まで表示（新規作成ボタン用に1つ空ける）
-                actions.append(
-                    PostbackAction(
-                        label=f"{sheet['name'][:15]}{'...' if len(sheet['name']) > 15 else ''}",
-                        data=f"select_sheet_{sheet['id']}"
-                    )
-                )
+            # FlexMessageで既存シート一覧を表示（横並びボタン）
+            # LINE Bot SDK v3の正しいFlexMessage構造
+            from linebot.v3.messaging import FlexMessage
+            
+            # ボタンコンポーネントを作成（横並び）
+            button_components = []
+            for sheet in spreadsheets[:6]:  # 最大6件まで表示
+                button_components.append({
+                    "type": "button",
+                    "action": {
+                        "type": "postback",
+                        "label": f"{sheet['name'][:12]}{'...' if len(sheet['name']) > 12 else ''}",
+                        "data": f"select_sheet_{sheet['id']}"
+                    },
+                    "style": "primary",
+                    "color": "#2196F3",
+                    "flex": 1,
+                    "margin": "xs"
+                })
             
             # 新規作成ボタンを追加
-            actions.append(
-                PostbackAction(
-                    label="🆕 新規シートを作成",
-                    data=f"new_sheet_{doc_type}"
-                )
-            )
+            button_components.append({
+                "type": "button",
+                "action": {
+                    "type": "postback",
+                    "label": "🆕 新規作成",
+                    "data": f"new_sheet_{doc_type}"
+                },
+                "style": "primary",
+                "color": "#4CAF50",
+                "flex": 1,
+                "margin": "xs"
+            })
             
-            # ボタンテンプレートを作成
-            buttons_template = TemplateMessage(
+            # FlexMessageの構造を作成（LINE Bot SDK v3仕様）
+            flex_contents = {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "md",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": f"📄{doc_name}の既存シート一覧（{len(spreadsheets)}件）",
+                            "weight": "bold",
+                            "size": "lg",
+                            "color": "#333333"
+                        },
+                        {
+                            "type": "text",
+                            "text": "使用するシートを選択してください",
+                            "size": "sm",
+                            "color": "#666666",
+                            "wrap": True
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "spacing": "xs",
+                            "contents": button_components[:3]  # 最初の3つを横並び
+                        }
+                    ]
+                }
+            }
+            
+            # 4つ目以降がある場合は追加の行を作成
+            if len(button_components) > 3:
+                additional_buttons = []
+                for i in range(3, min(6, len(button_components))):
+                    additional_buttons.append(button_components[i])
+                
+                flex_contents["body"]["contents"].append({
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "xs",
+                    "contents": additional_buttons
+                })
+            
+            flex_message = FlexMessage(
                 altText=f"{doc_name}の既存シート選択",
-                template=ButtonsTemplate(
-                    title=f"📄{doc_name}の既存シート一覧（{len(spreadsheets)}件）",
-                    text="使用するシートを選択してください",
-                    actions=actions
-                )
+                contents=flex_contents
             )
             
             with ApiClient(configuration) as api_client:
@@ -463,7 +522,7 @@ def handle_postback(event):
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[buttons_template]
+                        messages=[flex_message]
                     )
                 )
         except Exception as e:
