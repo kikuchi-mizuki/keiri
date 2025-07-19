@@ -394,90 +394,130 @@ def handle_postback(event):
             'creation_method': 'existing_sheet',
             'items': []
         })
-        # 既存スプレッドシート一覧を取得して表示（以降は従来通り）
-        try:
-            credentials = auth_service.get_credentials(user_id)
-            if not credentials:
-                session_manager.update_session(user_id, {
-                    'state': 'registration',
-                    'step': 'google_auth'
-                })
-                auth_url = auth_service.get_auth_url(user_id)
-                if auth_url:
-                    with ApiClient(configuration) as api_client:
-                        line_bot_api = MessagingApi(api_client)
-                        line_bot_api.push_message(
-                            PushMessageRequest(
-                                to=user_id,
-                                messages=[TextMessage(text="🔐 既存シートを確認するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
-                            )
-                        )
-                return
-            spreadsheets = google_sheets_service.list_spreadsheets_by_type(credentials, doc_type, max_results=10)
-            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
-            if not spreadsheets:
+        # シート一覧を表示
+        show_sheet_list(user_id, doc_type, page=0)
+        return
+
+def show_sheet_list(user_id, doc_type, page=0):
+    """シート一覧を表示する関数"""
+    try:
+        credentials = auth_service.get_credentials(user_id)
+        if not credentials:
+            session_manager.update_session(user_id, {
+                'state': 'registration',
+                'step': 'google_auth'
+            })
+            auth_url = auth_service.get_auth_url(user_id)
+            if auth_url:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
-                            messages=[TextMessage(text=f"📄{doc_name}の既存シートが見つかりませんでした。\n\n新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                            messages=[TextMessage(text="🔐 既存シートを確認するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
                         )
                     )
-                session_manager.update_session(user_id, {
-                    'step': 'client_name',
-                    'creation_method': 'new_sheet'
-                })
-                return
-            # 既存シート一覧をQuickReply形式で表示
-            from datetime import datetime
-            
-            # 最初のメッセージ：説明
-            explanation_text = f"📄{doc_name}の作成を開始します。\n使用する{doc_name}シートを選択してください。"
-            
-            # QuickReplyアイテムを作成
-            quick_reply_items = []
-            for i, sheet in enumerate(spreadsheets[:10], 1):
-                # シート名を短縮（長すぎる場合）
-                sheet_name = sheet['name']
-                if len(sheet_name) > 10:
-                    sheet_name = sheet_name[:7] + "..."
-                
-                # 日付を整形
-                modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
-                formatted_date = modified_time.strftime('%m/%d')
-                
-                # ボタンラベルを作成（最大20文字に制限）
-                button_label = f"{sheet_name} ({formatted_date})"
-                if len(button_label) > 20:
-                    button_label = f"{sheet_name[:5]}... ({formatted_date})"
-                
-                quick_reply_items.append(QuickReplyItem(
-                    action=PostbackAction(
-                        label=button_label,
-                        data=f'select_sheet_{sheet["id"]}'
-                    )
-                ))
-            
-            # 新規作成ボタンを追加
-            quick_reply_items.append(QuickReplyItem(
-                action=PostbackAction(
-                    label='🆕 新規作成',
-                    data=f'new_sheet_{doc_type}'
-                )
-            ))
-            
-            # QuickReplyを作成
-            quick_reply = QuickReply(items=quick_reply_items)
-            
+            return
+        
+        # 全件取得してページネーション
+        all_spreadsheets = google_sheets_service.list_spreadsheets_by_type(credentials, doc_type, max_results=100)
+        doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+        
+        if not all_spreadsheets:
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[TextMessage(text=explanation_text, quickReply=quick_reply)]
+                        messages=[TextMessage(text=f"📄{doc_name}の既存シートが見つかりませんでした。\n\n新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
                     )
                 )
+            session_manager.update_session(user_id, {
+                'step': 'client_name',
+                'creation_method': 'new_sheet'
+            })
+            return
+        
+        # ページネーション処理
+        items_per_page = 10
+        start_index = page * items_per_page
+        end_index = start_index + items_per_page
+        spreadsheets = all_spreadsheets[start_index:end_index]
+        total_pages = (len(all_spreadsheets) + items_per_page - 1) // items_per_page
+        
+        # 説明テキスト
+        explanation_text = f"📄{doc_name}の作成を開始します。\n使用する{doc_name}シートを選択してください。\n（{page + 1}/{total_pages}ページ）"
+        
+        # QuickReplyアイテムを作成
+        quick_reply_items = []
+        for i, sheet in enumerate(spreadsheets, 1):
+            # シート名を短縮（長すぎる場合）
+            sheet_name = sheet['name']
+            if len(sheet_name) > 10:
+                sheet_name = sheet_name[:7] + "..."
+            
+            # 日付を整形
+            from datetime import datetime
+            modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
+            formatted_date = modified_time.strftime('%m/%d')
+            
+            # ボタンラベルを作成（最大20文字に制限）
+            button_label = f"{sheet_name} ({formatted_date})"
+            if len(button_label) > 20:
+                button_label = f"{sheet_name[:5]}... ({formatted_date})"
+            
+            quick_reply_items.append(QuickReplyItem(
+                action=PostbackAction(
+                    label=button_label,
+                    data=f'select_sheet_{sheet["id"]}'
+                )
+            ))
+        
+        # 次の候補ボタンを追加（次のページがある場合）
+        if page + 1 < total_pages:
+            quick_reply_items.append(QuickReplyItem(
+                action=PostbackAction(
+                    label='次の候補',
+                    data=f'next_page_{doc_type}_{page + 1}'
+                )
+            ))
+        
+        # 新規作成ボタンを追加
+        quick_reply_items.append(QuickReplyItem(
+            action=PostbackAction(
+                label='🆕 新規作成',
+                data=f'new_sheet_{doc_type}'
+            )
+        ))
+        
+        # QuickReplyを作成
+        quick_reply = QuickReply(items=quick_reply_items)
+        
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            line_bot_api.push_message(
+                PushMessageRequest(
+                    to=user_id,
+                    messages=[TextMessage(text=explanation_text, quickReply=quick_reply)]
+                )
+            )
+    except Exception as e:
+        print(f"[ERROR] show_sheet_list: 例外発生: {e}")
+        import traceback
+        traceback.print_exc()
+        doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            line_bot_api.push_message(
+                PushMessageRequest(
+                    to=user_id,
+                    messages=[TextMessage(text=f"📄{doc_name}の既存シート選択でエラーが発生しました。\n\n新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                )
+            )
+        session_manager.update_session(user_id, {
+            'step': 'client_name',
+            'creation_method': 'new_sheet'
+        })
         except Exception as e:
             print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
             doc_name = "見積書" if doc_type == 'estimate' else "請求書"
@@ -489,6 +529,15 @@ def handle_postback(event):
                         messages=[TextMessage(text=f"��{doc_name}の既存シート選択を開始します。\n\n既存の{doc_name}スプレッドシートIDを入力してください。\n\n（新規作成の場合は「新規作成」と入力してください）")]
                     )
                 )
+        return
+    
+    elif data.startswith('next_page_'):
+        # 次のページを表示
+        parts = data.replace('next_page_', '').split('_')
+        if len(parts) >= 2:
+            doc_type = parts[0]
+            page = int(parts[1])
+            show_sheet_list(user_id, doc_type, page=page)
         return
     
     elif data.startswith('new_sheet_'):
@@ -541,121 +590,7 @@ def handle_postback(event):
             print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
         return
     
-    elif data.startswith('show_more_sheets_'):
-        # より多くのシートを表示
-        doc_type = data.replace('show_more_sheets_', '')
-        session_manager.update_session(user_id, {
-            'state': 'document_creation',
-            'document_type': doc_type,
-            'step': 'select_existing_sheet',
-            'creation_method': 'existing_sheet',
-            'items': []
-        })
-        
-        # 既存スプレッドシート一覧を取得して表示（全件表示）
-        try:
-            credentials = auth_service.get_credentials(user_id)
-            if not credentials:
-                # 認証が必要な場合
-                session_manager.update_session(user_id, {
-                    'state': 'registration',
-                    'step': 'google_auth'
-                })
-                auth_url = auth_service.get_auth_url(user_id)
-                if auth_url:
-                    with ApiClient(configuration) as api_client:
-                        line_bot_api = MessagingApi(api_client)
-                        line_bot_api.push_message(
-                            PushMessageRequest(
-                                to=user_id,
-                                messages=[TextMessage(text="🔐 既存シートを確認するにはGoogle認証が必要です。\n\n以下のリンクから認証を完了してください：\n\n" + auth_url)]
-                            )
-                        )
-                return
-            
-            # 既存スプレッドシート一覧を取得（全件）
-            spreadsheets = google_sheets_service.list_spreadsheets_by_type(credentials, doc_type, max_results=20)
-            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
-            
-            if not spreadsheets:
-                # 既存シートがない場合
-                with ApiClient(configuration) as api_client:
-                    line_bot_api = MessagingApi(api_client)
-                    line_bot_api.push_message(
-                        PushMessageRequest(
-                            to=user_id,
-                            messages=[TextMessage(text=f"📄{doc_name}の既存シートが見つかりませんでした。\n\n新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
-                        )
-                    )
-                # 新規作成に切り替え
-                session_manager.update_session(user_id, {
-                    'step': 'client_name',
-                    'creation_method': 'new_sheet'
-                })
-                return
-            
-            # 全件をQuickReply形式で表示
-            from datetime import datetime
-            
-            # 説明テキスト
-            explanation_text = f"📄{doc_name}の作成を開始します。\n使用する{doc_name}シートを選択してください。"
-            
-            # QuickReplyアイテムを作成
-            quick_reply_items = []
-            for i, sheet in enumerate(spreadsheets, 1):
-                # シート名を短縮（長すぎる場合）
-                sheet_name = sheet['name']
-                if len(sheet_name) > 10:
-                    sheet_name = sheet_name[:7] + "..."
-                
-                # 日付を整形
-                modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
-                formatted_date = modified_time.strftime('%m/%d')
-                
-                # ボタンラベルを作成（最大20文字に制限）
-                button_label = f"{sheet_name} ({formatted_date})"
-                if len(button_label) > 20:
-                    button_label = f"{sheet_name[:5]}... ({formatted_date})"
-                
-                quick_reply_items.append(QuickReplyItem(
-                    action=PostbackAction(
-                        label=button_label,
-                        data=f'select_sheet_{sheet["id"]}'
-                    )
-                ))
-            
-            # 新規作成ボタンを追加
-            quick_reply_items.append(QuickReplyItem(
-                action=PostbackAction(
-                    label='🆕 新規作成',
-                    data=f'new_sheet_{doc_type}'
-                )
-            ))
-            
-            # QuickReplyを作成
-            quick_reply = QuickReply(items=quick_reply_items)
-            
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.push_message(
-                    PushMessageRequest(
-                        to=user_id,
-                        messages=[TextMessage(text=explanation_text, quickReply=quick_reply)]
-                    )
-                )
-        except Exception as e:
-            print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
-            # エラーの場合は手動入力にフォールバック
-            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.push_message(
-                    PushMessageRequest(
-                        to=user_id,
-                        messages=[TextMessage(text=f"📄{doc_name}の既存シート選択を開始します。\n\n既存の{doc_name}スプレッドシートIDを入力してください。\n\n（新規作成の場合は「新規作成」と入力してください）")]
-                    )
-                )
-        return
+
     
     elif data == 'cancel_creation':
         # 作成をキャンセル
