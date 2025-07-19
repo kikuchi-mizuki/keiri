@@ -440,15 +440,17 @@ def handle_postback(event):
             for i, sheet in enumerate(spreadsheets[:10], 1):
                 # シート名を短縮（長すぎる場合）
                 sheet_name = sheet['name']
-                if len(sheet_name) > 15:
-                    sheet_name = sheet_name[:12] + "..."
+                if len(sheet_name) > 10:
+                    sheet_name = sheet_name[:7] + "..."
                 
                 # 日付を整形
                 modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
                 formatted_date = modified_time.strftime('%m/%d')
                 
-                # ボタンラベルを作成
+                # ボタンラベルを作成（最大20文字に制限）
                 button_label = f"{sheet_name} ({formatted_date})"
+                if len(button_label) > 20:
+                    button_label = f"{sheet_name[:5]}... ({formatted_date})"
                 
                 quick_reply_items.append(QuickReplyItem(
                     action=PostbackAction(
@@ -603,15 +605,17 @@ def handle_postback(event):
             for i, sheet in enumerate(spreadsheets, 1):
                 # シート名を短縮（長すぎる場合）
                 sheet_name = sheet['name']
-                if len(sheet_name) > 15:
-                    sheet_name = sheet_name[:12] + "..."
+                if len(sheet_name) > 10:
+                    sheet_name = sheet_name[:7] + "..."
                 
                 # 日付を整形
                 modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
                 formatted_date = modified_time.strftime('%m/%d')
                 
-                # ボタンラベルを作成
+                # ボタンラベルを作成（最大20文字に制限）
                 button_label = f"{sheet_name} ({formatted_date})"
+                if len(button_label) > 20:
+                    button_label = f"{sheet_name[:5]}... ({formatted_date})"
                 
                 quick_reply_items.append(QuickReplyItem(
                     action=PostbackAction(
