@@ -429,27 +429,41 @@ def handle_postback(event):
                     'creation_method': 'new_sheet'
                 })
                 return
-            # テキスト形式で既存シート一覧を表示（FlexMessageの代わり）
-            sheet_list_text = f"📄{doc_name}の既存シート一覧（{len(spreadsheets)}件）：\n\n"
-            for i, sheet in enumerate(spreadsheets[:10], 1):
-                # 日付を整形
-                from datetime import datetime
-                modified_time = datetime.fromisoformat(sheet['modified_time'].replace('Z', '+00:00'))
-                formatted_date = modified_time.strftime('%Y/%m/%d %H:%M')
-                
-                sheet_list_text += f"{i}. {sheet['name']}\n"
-                sheet_list_text += f"   最終更新: {formatted_date}\n"
-                sheet_list_text += f"   ID: {sheet['id']}\n\n"
+            # ボタンテンプレートで既存シート一覧を表示
+            # 最大4つのボタンまで表示可能
+            actions = []
+            for sheet in spreadsheets[:3]:  # 最大3件まで表示（新規作成ボタン用に1つ空ける）
+                actions.append(
+                    PostbackAction(
+                        label=f"{sheet['name'][:15]}{'...' if len(sheet['name']) > 15 else ''}",
+                        data=f"select_sheet_{sheet['id']}"
+                    )
+                )
             
-            sheet_list_text += "使用したいスプレッドシートのIDを入力してください。\n"
-            sheet_list_text += "（新規作成の場合は「新規作成」と入力してください）"
+            # 新規作成ボタンを追加
+            actions.append(
+                PostbackAction(
+                    label="🆕 新規シートを作成",
+                    data=f"new_sheet_{doc_type}"
+                )
+            )
+            
+            # ボタンテンプレートを作成
+            buttons_template = TemplateMessage(
+                altText=f"{doc_name}の既存シート選択",
+                template=ButtonsTemplate(
+                    title=f"📄{doc_name}の既存シート一覧（{len(spreadsheets)}件）",
+                    text="使用するシートを選択してください",
+                    actions=actions
+                )
+            )
             
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[TextMessage(text=sheet_list_text)]
+                        messages=[buttons_template]
                     )
                 )
         except Exception as e:
