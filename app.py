@@ -517,7 +517,7 @@ def show_sheet_list(user_id, doc_type, page=0):
         session_manager.update_session(user_id, {
             'step': 'client_name',
             'creation_method': 'new_sheet'
-                )
+        })
         return
     
     elif data.startswith('next_page_'):
