@@ -517,17 +517,6 @@ def show_sheet_list(user_id, doc_type, page=0):
         session_manager.update_session(user_id, {
             'step': 'client_name',
             'creation_method': 'new_sheet'
-        })
-        except Exception as e:
-            print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
-            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.push_message(
-                    PushMessageRequest(
-                        to=user_id,
-                        messages=[TextMessage(text=f"��{doc_name}の既存シート選択を開始します。\n\n既存の{doc_name}スプレッドシートIDを入力してください。\n\n（新規作成の場合は「新規作成」と入力してください）")]
-                    )
                 )
         return
     
