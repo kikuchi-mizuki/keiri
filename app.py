@@ -398,6 +398,70 @@ def handle_postback(event):
         show_sheet_list(user_id, doc_type, page=0)
         return
 
+    elif data.startswith('next_page_'):
+        # 次のページを表示
+        parts = data.replace('next_page_', '').split('_')
+        if len(parts) >= 2:
+            doc_type = parts[0]
+            page = int(parts[1])
+            show_sheet_list(user_id, doc_type, page=page)
+        return
+    elif data.startswith('new_sheet_'):
+        # 新規シート作成
+        doc_type = data.replace('new_sheet_', '')
+        session_manager.update_session(user_id, {
+            'state': 'document_creation',
+            'document_type': doc_type,
+            'step': 'client_name',
+            'creation_method': 'new_sheet',
+            'items': []
+        })
+        doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
+                        messages=[TextMessage(text=f"📄{doc_name}の新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                    )
+                )
+        except Exception as e:
+            print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
+        return
+    elif data.startswith('select_sheet_'):
+        # 既存シートを選択
+        spreadsheet_id = data.replace('select_sheet_', '')
+        session = session_manager.get_session(user_id)
+        doc_type = session.get('document_type')
+        
+        session_manager.update_session(user_id, {
+            'selected_spreadsheet_id': spreadsheet_id,
+            'step': 'client_name',
+            'creation_method': 'existing_sheet'
+        })
+        
+        doc_name = "見積書" if doc_type == 'estimate' else "請求書"
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
+                        messages=[TextMessage(text=f"📄{doc_name}の既存シートに追加します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
+                    )
+                )
+        except Exception as e:
+            print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
+        return
+    elif data == 'cancel_creation':
+        # 作成をキャンセル
+        session_manager.update_session(user_id, {'state': 'menu', 'step': None})
+        show_main_menu(event)
+        return
+    else:
+        show_main_menu(event)
+
 def show_sheet_list(user_id, doc_type, page=0):
     """シート一覧を表示する関数"""
     try:
@@ -518,71 +582,7 @@ def show_sheet_list(user_id, doc_type, page=0):
             'step': 'client_name',
             'creation_method': 'new_sheet'
         })
-        return
-    elif data.startswith('next_page_'):
-        # 次のページを表示
-        parts = data.replace('next_page_', '').split('_')
-        if len(parts) >= 2:
-            doc_type = parts[0]
-            page = int(parts[1])
-            show_sheet_list(user_id, doc_type, page=page)
-        return
-    elif data.startswith('new_sheet_'):
-        # 新規シート作成
-        doc_type = data.replace('new_sheet_', '')
-        session_manager.update_session(user_id, {
-            'state': 'document_creation',
-            'document_type': doc_type,
-            'step': 'client_name',
-            'creation_method': 'new_sheet',
-            'items': []
-        })
-        doc_name = "見積書" if doc_type == 'estimate' else "請求書"
-        try:
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.push_message(
-                    PushMessageRequest(
-                        to=user_id,
-                        messages=[TextMessage(text=f"📄{doc_name}の新規作成を開始します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
-                    )
-                )
-        except Exception as e:
-            print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
-        return
-    elif data.startswith('select_sheet_'):
-        # 既存シートを選択
-        spreadsheet_id = data.replace('select_sheet_', '')
-        session = session_manager.get_session(user_id)
-        doc_type = session.get('document_type')
-        
-        session_manager.update_session(user_id, {
-            'selected_spreadsheet_id': spreadsheet_id,
-            'step': 'client_name',
-            'creation_method': 'existing_sheet'
-        })
-        
-        doc_name = "見積書" if doc_type == 'estimate' else "請求書"
-        try:
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.push_message(
-                    PushMessageRequest(
-                        to=user_id,
-                        messages=[TextMessage(text=f"📄{doc_name}の既存シートに追加します。\n\n宛名（クライアント名）を入力してください。\n例：株式会社○○ ○○様")]
-                    )
-                )
-        except Exception as e:
-            print(f"[ERROR] handle_postback: push_message送信時に例外発生: {e}")
-        return
-    elif data == 'cancel_creation':
-        # 作成をキャンセル
-        session_manager.update_session(user_id, {'state': 'menu', 'step': None})
-        show_main_menu(event)
-        return
-    
-    else:
-        show_main_menu(event)
+
 
 def handle_existing_user(event, session, text):
     """既存ユーザーのメッセージ処理"""
