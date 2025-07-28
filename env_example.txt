@@ -1,15 +1,15 @@
 # LINE Bot設定
-LINE_CHANNEL_ACCESS_TOKEN=your_line_channel_access_token_here
-LINE_CHANNEL_SECRET=your_line_channel_secret_here
+LINE_CHANNEL_ACCESS_TOKEN=your_line_channel_access_token
+LINE_CHANNEL_SECRET=your_line_channel_secret
 
-# Google API設定
-GOOGLE_CLIENT_SECRETS_FILE=client_secrets.json
-GOOGLE_CLIENT_SECRETS_JSON={"web":{"client_id":"your_client_id","project_id":"your_project_id","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"your_client_secret","redirect_uris":["http://localhost:5000/auth/callback"]}}
-GOOGLE_REDIRECT_URI=https://web-production-f14af.up.railway.app/auth/callback
-TEMPLATE_SPREADSHEET_ID=your_template_spreadsheet_id_here
+# Google OAuth設定
+GOOGLE_CLIENT_SECRETS_JSON={"web":{"client_id":"your_client_id","project_id":"your_project_id","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"your_client_secret","redirect_uris":["your_redirect_uri"]}}
 
-# データベース設定
-DATABASE_URL=sqlite:///sessions.db
+# 共有PostgreSQLデータベース設定（解約制限システム用）
+DATABASE_URL=postgresql://username:password@host:port/database_name
+
+# AIコレクションズ設定
+AI_COLLECTIONS_BASE_URL=https://ai-collections.herokuapp.com
 
 # アプリケーション設定
 FLASK_ENV=development

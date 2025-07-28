@@ -19,6 +19,7 @@ from services.google_sheets_service import GoogleSheetsService
 from services.document_generator import DocumentGenerator
 from services.auth_service import AuthService
 from services.pdf_generator import PDFGenerator
+from services.restriction_checker import safe_check_restriction, RestrictionChecker
 
 # 環境変数の読み込み
 load_dotenv()
@@ -174,6 +175,24 @@ def handle_message(event):
     text = event.message.text if hasattr(event.message, 'text') else ''
     print(f"[DEBUG] handle_message: メッセージテキスト: {text}")
 
+    # 利用制限チェック（最初に実行）
+    restriction_result = safe_check_restriction(user_id, "AI経理秘書")
+    if restriction_result.get("is_restricted"):
+        logger.info(f"User {user_id} is restricted from using the service")
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                restriction_message = RestrictionChecker().get_restriction_message()
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
+                        messages=[TemplateMessage(**restriction_message)]
+                    )
+                )
+        except Exception as e:
+            logger.error(f"Failed to send restriction message: {e}")
+        return
+
     # キャンセル対応
     if text.strip() == "キャンセル":
         session_manager.update_session(user_id, {'state': 'menu', 'step': None})
@@ -277,6 +296,24 @@ def handle_postback(event):
     data = event.postback.data
     
     logger.info(f"Received postback from {user_id}: {data}")
+    
+    # 利用制限チェック（最初に実行）
+    restriction_result = safe_check_restriction(user_id, "AI経理秘書")
+    if restriction_result.get("is_restricted"):
+        logger.info(f"User {user_id} is restricted from using the service (postback)")
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                restriction_message = RestrictionChecker().get_restriction_message()
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
+                        messages=[TemplateMessage(**restriction_message)]
+                    )
+                )
+        except Exception as e:
+            logger.error(f"Failed to send restriction message: {e}")
+        return
     
     if data == 'create_estimate':
         session_manager.update_session(user_id, {
@@ -1657,6 +1694,58 @@ def download_pdf_sheet(spreadsheet_id, sheet_name):
         return response
 
     return send_file(tmp_path, as_attachment=True, mimetype='application/pdf', download_name=f'{sheet_name}.pdf')
+
+@app.route('/test/restriction/<line_user_id>')
+def test_restriction_check(line_user_id):
+    """制限チェック機能のテスト用エンドポイント"""
+    try:
+        restriction_result = safe_check_restriction(line_user_id, "AI経理秘書")
+        return {
+            "line_user_id": line_user_id,
+            "restriction_result": restriction_result,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error in test_restriction_check: {e}")
+        return {"error": str(e)}, 500
+
+@app.route('/health/restriction')
+def health_check_restriction():
+    """制限チェック機能のヘルスチェック"""
+    try:
+        # データベース接続テスト
+        database_url = os.getenv('DATABASE_URL')
+        if not database_url:
+            return {
+                "status": "warning",
+                "message": "DATABASE_URL not configured",
+                "restriction_check_enabled": False
+            }
+        
+        # 簡単な接続テスト
+        import psycopg2
+        with psycopg2.connect(database_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                result = cur.fetchone()
+                
+        return {
+            "status": "healthy",
+            "message": "Restriction check system is working",
+            "restriction_check_enabled": True,
+            "database_connection": "ok",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "message": f"Restriction check system error: {str(e)}",
+            "restriction_check_enabled": True,
+            "database_connection": "error",
+            "timestamp": datetime.now().isoformat()
+        }, 500
 
 if __name__ == "__main__":
     app.run(debug=False, host='0.0.0.0', port=5001, use_reloader=False) 

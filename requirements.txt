@@ -9,4 +9,5 @@ python-dotenv==1.0.0
 gunicorn==21.2.0
 requests==2.31.0
 pypdf==3.17.1
-reportlab==4.0.4 
+reportlab==4.0.4
+psycopg2-binary==2.9.9 

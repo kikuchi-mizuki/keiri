@@ -1,6 +1,8 @@
-# LINE見積書・請求書自動生成Bot
+# AI経理秘書 - LINE見積書・請求書自動生成Bot
 
 LINE上で会社情報と請求内容を入力することで、自動でGoogle Sheetsテンプレートに記入された見積書・請求書を生成し、編集リンクとPDFを取得できるBotシステムです。
+
+**解約制限システム対応**: 解約済みユーザーはサービス利用を制限され、AIコレクションズ公式LINEへの誘導が行われます。
 
 ## 機能概要
 
@@ -16,7 +18,7 @@ LINE上で会社情報と請求内容を入力することで、自動でGoogle 
 - **バックエンド**: Python (Flask)
 - **LINE Bot**: LINE Messaging API
 - **Google API**: Google Sheets API, Google Drive API, Google OAuth 2.0
-- **データベース**: SQLite (セッション管理)
+- **データベース**: SQLite (セッション管理), PostgreSQL (解約制限システム)
 - **認証**: Google OAuth 2.0
 
 ## セットアップ手順
@@ -52,13 +54,17 @@ pip install -r requirements.txt
 
 ```bash
 # LINE Bot設定
-LINE_CHANNEL_ACCESS_TOKEN=your_line_channel_access_token_here
-LINE_CHANNEL_SECRET=your_line_channel_secret_here
+LINE_CHANNEL_ACCESS_TOKEN=your_line_channel_access_token
+LINE_CHANNEL_SECRET=your_line_channel_secret
 
-# Google API設定
-GOOGLE_CLIENT_SECRETS_FILE=client_secrets.json
-GOOGLE_REDIRECT_URI=http://localhost:5000/auth/callback
-TEMPLATE_SPREADSHEET_ID=your_template_spreadsheet_id_here
+# Google OAuth設定
+GOOGLE_CLIENT_SECRETS_JSON={"web":{"client_id":"your_client_id","project_id":"your_project_id","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"your_client_secret","redirect_uris":["your_redirect_uri"]}}
+
+# 共有PostgreSQLデータベース設定（解約制限システム用）
+DATABASE_URL=postgresql://username:password@host:port/database_name
+
+# AIコレクションズ設定
+AI_COLLECTIONS_BASE_URL=https://ai-collections.herokuapp.com
 ```
 
 ### 7. アプリケーション起動
@@ -103,10 +109,45 @@ keiri/
 │   ├── session_manager.py          # セッション管理
 │   ├── auth_service.py             # Google認証管理
 │   ├── google_sheets_service.py    # Google Sheets操作
-│   └── document_generator.py       # 書類生成統合管理
+│   ├── document_generator.py       # 書類生成統合管理
+│   └── restriction_checker.py      # 解約制限チェック機能
 ├── sessions.db                     # SQLiteデータベース（自動生成）
 └── client_secrets.json             # Google OAuth設定（要配置）
 ```
+
+## 解約制限システム
+
+### 概要
+解約済みユーザーがサービスを利用できないように制限し、AIコレクションズ公式LINEへの誘導を行うシステムです。
+
+### 機能
+- **リアルタイム利用制限チェック**: メッセージ受信時に解約履歴をチェック
+- **制限メッセージ送信**: 解約済みユーザーに専用メッセージを送信
+- **AIコレクションズ誘導**: 公式LINEとサービス詳細ページへの誘導
+
+### データベース要件
+共有PostgreSQLデータベースに以下のテーブルが必要です：
+
+```sql
+-- ユーザーテーブル
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    line_user_id VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 解約履歴テーブル
+CREATE TABLE cancellation_history (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    content_type VARCHAR(100) NOT NULL,
+    cancelled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### テストエンドポイント
+- `/test/restriction/<line_user_id>`: 制限チェック機能のテスト
+- `/health/restriction`: 制限チェック機能のヘルスチェック
 
 ## セキュリティ考慮事項
 
