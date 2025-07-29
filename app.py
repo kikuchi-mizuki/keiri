@@ -195,11 +195,11 @@ def handle_message(event):
                     actions=[
                         URIAction(
                             label="AIコレクションズ公式LINE",
-                            uri="https://line.me/R/ti/p/@ai_collections"
+                            uri="https://lin.ee/eyYpOKq"
                         ),
                         URIAction(
                             label="サービス詳細",
-                            uri="https://ai-collections.herokuapp.com"
+                            uri="https://lp-production-9e2c.up.railway.app/"
                         )
                     ]
                 )
@@ -232,11 +232,11 @@ def handle_message(event):
                     actions=[
                         URIAction(
                             label="AIコレクションズ公式LINE",
-                            uri="https://line.me/R/ti/p/@ai_collections"
+                            uri="https://lin.ee/eyYpOKq"
                         ),
                         URIAction(
                             label="サービス詳細",
-                            uri="https://ai-collections.herokuapp.com"
+                            uri="https://lp-production-9e2c.up.railway.app/"
                         )
                     ]
                 )
@@ -350,11 +350,11 @@ def handle_message(event):
                             actions=[
                                 URIAction(
                                     label="AIコレクションズ公式LINE",
-                                    uri="https://line.me/R/ti/p/@ai_collections"
+                                    uri="https://lin.ee/eyYpOKq"
                                 ),
                                 URIAction(
                                     label="サービス詳細",
-                                    uri="https://ai-collections.herokuapp.com"
+                                    uri="https://lp-production-9e2c.up.railway.app/"
                                 )
                             ]
                         )
@@ -440,11 +440,11 @@ def handle_postback(event):
                     actions=[
                         URIAction(
                             label="AIコレクションズ公式LINE",
-                            uri="https://line.me/R/ti/p/@ai_collections"
+                            uri="https://lin.ee/eyYpOKq"
                         ),
                         URIAction(
                             label="サービス詳細",
-                            uri="https://ai-collections.herokuapp.com"
+                            uri="https://lp-production-9e2c.up.railway.app/"
                         )
                     ]
                 )
@@ -471,11 +471,11 @@ def handle_postback(event):
                     actions=[
                         URIAction(
                             label="AIコレクションズ公式LINE",
-                            uri="https://line.me/R/ti/p/@ai_collections"
+                            uri="https://lin.ee/eyYpOKq"
                         ),
                         URIAction(
                             label="サービス詳細",
-                            uri="https://ai-collections.herokuapp.com"
+                            uri="https://lp-production-9e2c.up.railway.app/"
                         )
                     ]
                 )
