@@ -191,7 +191,7 @@ def handle_message(event):
                 # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
                 template = ButtonsTemplate(
                     title="AI経理秘書の利用制限",
-                    text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
+                    text="AI経理秘書は解約されています。公式LINEで再登録してください。",
                     actions=[
                         URIAction(
                             label="AIコレクションズ公式LINE",
@@ -228,7 +228,7 @@ def handle_message(event):
                 # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
                 template = ButtonsTemplate(
                     title="AI経理秘書の利用制限",
-                    text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
+                    text="AI経理秘書は解約されています。公式LINEで再登録してください。",
                     actions=[
                         URIAction(
                             label="AIコレクションズ公式LINE",
@@ -346,7 +346,7 @@ def handle_message(event):
                         # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
                         template = ButtonsTemplate(
                             title="AI経理秘書の利用制限",
-                            text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
+                            text="AI経理秘書は解約されています。公式LINEで再登録してください。",
                             actions=[
                                 URIAction(
                                     label="AIコレクションズ公式LINE",
@@ -436,7 +436,7 @@ def handle_postback(event):
                 # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
                 template = ButtonsTemplate(
                     title="AI経理秘書の利用制限",
-                    text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
+                    text="AI経理秘書は解約されています。公式LINEで再登録してください。",
                     actions=[
                         URIAction(
                             label="AIコレクションズ公式LINE",
@@ -467,7 +467,7 @@ def handle_postback(event):
                 # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
                 template = ButtonsTemplate(
                     title="AI経理秘書の利用制限",
-                    text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
+                    text="AI経理秘書は解約されています。公式LINEで再登録してください。",
                     actions=[
                         URIAction(
                             label="AIコレクションズ公式LINE",
