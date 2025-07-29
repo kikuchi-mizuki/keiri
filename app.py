@@ -259,36 +259,93 @@ def handle_message(event):
             return
     
     if not session:
-        # 新規ユーザー - 最初にGoogle認証を行う
-        session_manager.create_session(user_id, {'state': 'registration', 'step': 'google_auth'})
-        auth_url = auth_service.get_auth_url(user_id)
-        if auth_url:
-            try:
-                print(f"[DEBUG] handle_message: reply_token={event.reply_token}, event={event}")
-                with ApiClient(configuration) as api_client:
-                    line_bot_api = MessagingApi(api_client)
-                    line_bot_api.push_message(
-                        PushMessageRequest(
-                            to=user_id,
-                            messages=[TextMessage(text="👩‍💼LINE見積書・請求書Botへようこそ！\n\nまずはGoogle認証を行ってください。\n以下のリンクからGoogle Driveへのアクセスを許可してください：\n\n" + auth_url)]
-                        )
+        # 新規ユーザー - 最初にメールアドレスを聞く
+        session_manager.create_session(user_id, {'state': 'email_input', 'step': 'email'})
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
+                        messages=[TextMessage(text="👩‍💼LINE見積書・請求書Botへようこそ！\n\nまずはメールアドレスを教えてください。\n\n※AIコレクションズで登録したメールアドレスを入力してください。")]
                     )
-            except Exception as e:
-                print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
+                )
+        except Exception as e:
+            print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
+        return
+    
+    # メールアドレス入力ステップの処理
+    if session.get('state') == 'email_input' and session.get('step') == 'email':
+        # メールアドレスの形式チェック
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if re.match(email_pattern, text.strip()):
+            email = text.strip().lower()
+            session_manager.update_session(user_id, {
+                'email': email,
+                'state': 'registration',
+                'step': 'google_auth'
+            })
+            
+            # メールアドレスで制限チェック
+            restriction_result = safe_check_restriction(user_id, email, "AI経理秘書")
+            if restriction_result.get("is_restricted"):
+                logger.info(f"User {user_id} is restricted from using the service (email: {email})")
+                try:
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        restriction_message = RestrictionChecker().get_restriction_message()
+                        line_bot_api.push_message(
+                            PushMessageRequest(
+                                to=user_id,
+                                messages=[TemplateMessage(**restriction_message)]
+                            )
+                        )
+                except Exception as e:
+                    logger.error(f"Failed to send restriction message: {e}")
+                return
+            
+            # 制限がない場合はGoogle認証に進む
+            auth_url = auth_service.get_auth_url(user_id)
+            if auth_url:
+                try:
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        line_bot_api.push_message(
+                            PushMessageRequest(
+                                to=user_id,
+                                messages=[TextMessage(text=f"✅ メールアドレスを確認しました。\n\n次にGoogle認証を行ってください。\n以下のリンクからGoogle Driveへのアクセスを許可してください：\n\n{auth_url}")]
+                            )
+                        )
+                except Exception as e:
+                    print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
+            else:
+                try:
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        line_bot_api.push_message(
+                            PushMessageRequest(
+                                to=user_id,
+                                messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。しばらく時間をおいて再度お試しください。")]
+                            )
+                        )
+                except Exception as e:
+                    print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
         else:
+            # 無効なメールアドレス
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
-                            messages=[TextMessage(text="👩‍💼LINE見積書・請求書Botへようこそ！\n\nGoogle認証URLの生成に失敗しました。しばらく時間をおいて再度お試しください。")]
+                            messages=[TextMessage(text="❌ 有効なメールアドレスを入力してください。\n\n例：example@example.com")]
                         )
                     )
             except Exception as e:
                 print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
         return
-    
+
     # 既存ユーザーの処理
     handle_existing_user(event, session, text)
 
@@ -1712,6 +1769,7 @@ def test_restriction_check(line_user_id):
             "line_user_id": line_user_id,
             "email": email,
             "restriction_result": restriction_result,
+            "usage_logs_check": "usage_logsテーブルを参照して制限を判定",
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:

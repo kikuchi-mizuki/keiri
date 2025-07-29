@@ -9,7 +9,7 @@ import re
 logger = logging.getLogger(__name__)
 
 class RestrictionChecker:
-    """解約制限チェック機能を提供するクラス（メールアドレスベース）"""
+    """解約制限チェック機能を提供するクラス（usage_logsベース）"""
     
     def __init__(self, content_type: str = "AI経理秘書"):
         self.content_type = content_type
@@ -17,7 +17,7 @@ class RestrictionChecker:
         
     def check_user_restriction(self, line_user_id: str, email: str = None) -> Dict[str, Any]:
         """
-        ユーザーの利用制限をチェックする（メールアドレス優先）
+        ユーザーの利用制限をチェックする（usage_logsベース）
         
         Args:
             line_user_id: LINEユーザーID
@@ -29,11 +29,18 @@ class RestrictionChecker:
                 - error: str (エラーメッセージ、エラーがある場合)
                 - user_id: int (データベースのユーザーID、見つかった場合)
                 - check_method: str (チェック方法: 'email' or 'line_user_id')
+                - usage_found: bool (usage_logsに記録があるかどうか)
         """
         try:
             if not self.database_url:
                 logger.warning("DATABASE_URL not set, skipping restriction check")
-                return {"is_restricted": False, "error": None, "user_id": None, "check_method": None}
+                return {
+                    "is_restricted": False, 
+                    "error": None, 
+                    "user_id": None, 
+                    "check_method": None,
+                    "usage_found": False
+                }
             
             with psycopg2.connect(self.database_url) as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -72,26 +79,31 @@ class RestrictionChecker:
                             "is_restricted": False, 
                             "error": None, 
                             "user_id": None, 
-                            "check_method": None
+                            "check_method": None,
+                            "usage_found": False
                         }
                     
-                    # 解約履歴をチェック
+                    # usage_logsテーブルで利用履歴をチェック
                     cur.execute("""
                         SELECT COUNT(*) as count 
-                        FROM cancellation_history 
+                        FROM usage_logs 
                         WHERE user_id = %s AND content_type = %s
                     """, (user_id, self.content_type))
                     
                     result = cur.fetchone()
-                    is_restricted = result['count'] > 0
+                    usage_found = result['count'] > 0
                     
-                    logger.info(f"Restriction check for user {user_id} (method: {check_method}): {is_restricted}")
+                    # usage_logsに記録がない場合は制限
+                    is_restricted = not usage_found
+                    
+                    logger.info(f"Usage check for user {user_id} (method: {check_method}): usage_found={usage_found}, is_restricted={is_restricted}")
                     
                     return {
                         "is_restricted": is_restricted,
                         "error": None,
                         "user_id": user_id,
-                        "check_method": check_method
+                        "check_method": check_method,
+                        "usage_found": usage_found
                     }
                     
         except psycopg2.Error as e:
@@ -100,7 +112,8 @@ class RestrictionChecker:
                 "is_restricted": False,
                 "error": f"Database connection error: {str(e)}",
                 "user_id": None,
-                "check_method": None
+                "check_method": None,
+                "usage_found": False
             }
         except Exception as e:
             logger.error(f"Unexpected error during restriction check: {e}")
@@ -108,7 +121,8 @@ class RestrictionChecker:
                 "is_restricted": False,
                 "error": f"Unexpected error: {str(e)}",
                 "user_id": None,
-                "check_method": None
+                "check_method": None,
+                "usage_found": False
             }
     
     def _is_valid_email(self, email: str) -> bool:
@@ -168,5 +182,6 @@ def safe_check_restriction(line_user_id: str, email: str = None, content_type: s
             "is_restricted": False,
             "error": f"Check failed: {str(e)}",
             "user_id": None,
-            "check_method": None
+            "check_method": None,
+            "usage_found": False
         } 
