@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from flask import Flask, request, abort, redirect, url_for, send_file, after_this_request
 from linebot.v3.messaging import (
-    MessagingApi, Configuration, ApiClient, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage
+    MessagingApi, Configuration, ApiClient, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage, UriAction
 )
 from linebot.v3.webhooks.models import MessageEvent, PostbackEvent
 from linebot.v3.webhook import WebhookHandler
@@ -188,11 +188,25 @@ def handle_message(event):
         try:
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                restriction_message = RestrictionChecker().get_restriction_message()
+                # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
+                template = ButtonsTemplate(
+                    title="AI経理秘書の利用制限",
+                    text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
+                    actions=[
+                        UriAction(
+                            label="AIコレクションズ公式LINE",
+                            uri="https://line.me/R/ti/p/@ai_collections"
+                        ),
+                        UriAction(
+                            label="サービス詳細",
+                            uri="https://ai-collections.herokuapp.com"
+                        )
+                    ]
+                )
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[TemplateMessage(**restriction_message)]
+                        messages=[TemplateMessage(alt_text="AI経理秘書の利用制限", template=template)]
                     )
                 )
         except Exception as e:
@@ -211,11 +225,25 @@ def handle_message(event):
         try:
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                restriction_message = RestrictionChecker().get_restriction_message()
+                # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
+                template = ButtonsTemplate(
+                    title="AI経理秘書の利用制限",
+                    text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
+                    actions=[
+                        UriAction(
+                            label="AIコレクションズ公式LINE",
+                            uri="https://line.me/R/ti/p/@ai_collections"
+                        ),
+                        UriAction(
+                            label="サービス詳細",
+                            uri="https://ai-collections.herokuapp.com"
+                        )
+                    ]
+                )
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[TemplateMessage(**restriction_message)]
+                        messages=[TemplateMessage(alt_text="AI経理秘書の利用制限", template=template)]
                     )
                 )
         except Exception as e:
@@ -313,11 +341,25 @@ def handle_message(event):
                 try:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
-                        restriction_message = RestrictionChecker().get_restriction_message()
+                        # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
+                        template = ButtonsTemplate(
+                            title="AI経理秘書の利用制限",
+                            text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
+                            actions=[
+                                UriAction(
+                                    label="AIコレクションズ公式LINE",
+                                    uri="https://line.me/R/ti/p/@ai_collections"
+                                ),
+                                UriAction(
+                                    label="サービス詳細",
+                                    uri="https://ai-collections.herokuapp.com"
+                                )
+                            ]
+                        )
                         line_bot_api.push_message(
                             PushMessageRequest(
                                 to=user_id,
-                                messages=[TemplateMessage(**restriction_message)]
+                                messages=[TemplateMessage(alt_text="AI経理秘書の利用制限", template=template)]
                             )
                         )
                 except Exception as e:
@@ -389,11 +431,25 @@ def handle_postback(event):
         try:
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                restriction_message = RestrictionChecker().get_restriction_message()
+                # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
+                template = ButtonsTemplate(
+                    title="AI経理秘書の利用制限",
+                    text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
+                    actions=[
+                        UriAction(
+                            label="AIコレクションズ公式LINE",
+                            uri="https://line.me/R/ti/p/@ai_collections"
+                        ),
+                        UriAction(
+                            label="サービス詳細",
+                            uri="https://ai-collections.herokuapp.com"
+                        )
+                    ]
+                )
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[TemplateMessage(**restriction_message)]
+                        messages=[TemplateMessage(alt_text="AI経理秘書の利用制限", template=template)]
                     )
                 )
         except Exception as e:
@@ -406,11 +462,25 @@ def handle_postback(event):
         try:
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
-                restriction_message = RestrictionChecker().get_restriction_message()
+                # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
+                template = ButtonsTemplate(
+                    title="AI経理秘書の利用制限",
+                    text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
+                    actions=[
+                        UriAction(
+                            label="AIコレクションズ公式LINE",
+                            uri="https://line.me/R/ti/p/@ai_collections"
+                        ),
+                        UriAction(
+                            label="サービス詳細",
+                            uri="https://ai-collections.herokuapp.com"
+                        )
+                    ]
+                )
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[TemplateMessage(**restriction_message)]
+                        messages=[TemplateMessage(alt_text="AI経理秘書の利用制限", template=template)]
                     )
                 )
         except Exception as e:
