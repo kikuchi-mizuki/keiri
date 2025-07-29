@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from datetime import datetime
-from flask import Flask, request, abort, redirect, url_for, send_file, after_this_request
+from flask import Flask, request, abort, redirect, url_for, send_file, after_this_request, jsonify
 from linebot.v3.messaging import (
     MessagingApi, Configuration, ApiClient, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage, URIAction
 )
@@ -1943,6 +1943,101 @@ def health_check_restriction():
             "database_connection": "error",
             "timestamp": datetime.now().isoformat()
         }, 500
+
+@app.route('/test/restriction/<line_user_id>')
+def test_restriction(line_user_id):
+    """制限チェックのテスト用エンドポイント"""
+    email = request.args.get('email')
+    result = safe_check_restriction(line_user_id, email)
+    return jsonify(result)
+
+@app.route('/health/restriction')
+def health_restriction():
+    """制限システムのヘルスチェック"""
+    try:
+        # データベース接続テスト
+        from services.restriction_checker import RestrictionChecker
+        checker = RestrictionChecker()
+        result = checker.check_user_restriction("test_user", "test@example.com")
+        return jsonify({
+            "status": "healthy",
+            "database_connected": True,
+            "test_result": result
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "unhealthy",
+            "database_connected": False,
+            "error": str(e)
+        }), 500
+
+# 契約管理用のテストエンドポイント
+@app.route('/test/subscription/create', methods=['POST'])
+def test_create_subscription():
+    """契約作成のテスト用エンドポイント"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        content_type = data.get('content_type', 'AI経理秘書')
+        duration_days = data.get('duration_days', 30)
+        
+        from services.restriction_checker import create_subscription
+        success = create_subscription(user_id, content_type, duration_days)
+        
+        return jsonify({
+            "success": success,
+            "user_id": user_id,
+            "content_type": content_type,
+            "duration_days": duration_days
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/test/subscription/<int:user_id>')
+def test_get_subscriptions(user_id):
+    """ユーザーの契約一覧取得テスト用エンドポイント"""
+    try:
+        from services.restriction_checker import get_user_subscriptions
+        subscriptions = get_user_subscriptions(user_id)
+        
+        return jsonify({
+            "user_id": user_id,
+            "subscriptions": subscriptions
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/test/subscription/<int:subscription_id>/extend', methods=['POST'])
+def test_extend_subscription(subscription_id):
+    """契約延長のテスト用エンドポイント"""
+    try:
+        data = request.get_json()
+        additional_days = data.get('additional_days', 30)
+        
+        from services.restriction_checker import extend_subscription
+        success = extend_subscription(subscription_id, additional_days)
+        
+        return jsonify({
+            "success": success,
+            "subscription_id": subscription_id,
+            "additional_days": additional_days
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/test/subscription/<int:subscription_id>/cancel', methods=['POST'])
+def test_cancel_subscription(subscription_id):
+    """契約キャンセルのテスト用エンドポイント"""
+    try:
+        from services.restriction_checker import cancel_subscription
+        success = cancel_subscription(subscription_id)
+        
+        return jsonify({
+            "success": success,
+            "subscription_id": subscription_id
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=False, host='0.0.0.0', port=5001, use_reloader=False) 
