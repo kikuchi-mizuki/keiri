@@ -175,8 +175,12 @@ def handle_message(event):
     text = event.message.text if hasattr(event.message, 'text') else ''
     print(f"[DEBUG] handle_message: メッセージテキスト: {text}")
 
+    # セッション情報の取得（制限チェック用）
+    session = session_manager.get_session(user_id)
+    email = session.get('email') if session else None
+    
     # 利用制限チェック（最初に実行）
-    restriction_result = safe_check_restriction(user_id, "AI経理秘書")
+    restriction_result = safe_check_restriction(user_id, email, "AI経理秘書")
     if restriction_result.get("is_restricted"):
         logger.info(f"User {user_id} is restricted from using the service")
         try:
@@ -203,7 +207,6 @@ def handle_message(event):
     print(f"[DEBUG] handle_message: reply_token={event.reply_token}, event={event}")
     
     # セッション情報の取得
-    session = session_manager.get_session(user_id)
     step = session.get('step') if session else None
 
     print(f"[DEBUG] handle_message: user_id={user_id}, text={text}, session={session}, step={step}")
@@ -297,8 +300,12 @@ def handle_postback(event):
     
     logger.info(f"Received postback from {user_id}: {data}")
     
+    # セッション情報の取得（制限チェック用）
+    session = session_manager.get_session(user_id)
+    email = session.get('email') if session else None
+    
     # 利用制限チェック（最初に実行）
-    restriction_result = safe_check_restriction(user_id, "AI経理秘書")
+    restriction_result = safe_check_restriction(user_id, email, "AI経理秘書")
     if restriction_result.get("is_restricted"):
         logger.info(f"User {user_id} is restricted from using the service (postback)")
         try:
@@ -1699,9 +1706,11 @@ def download_pdf_sheet(spreadsheet_id, sheet_name):
 def test_restriction_check(line_user_id):
     """制限チェック機能のテスト用エンドポイント"""
     try:
-        restriction_result = safe_check_restriction(line_user_id, "AI経理秘書")
+        email = request.args.get('email')  # クエリパラメータからメールアドレスを取得
+        restriction_result = safe_check_restriction(line_user_id, email, "AI経理秘書")
         return {
             "line_user_id": line_user_id,
+            "email": email,
             "restriction_result": restriction_result,
             "timestamp": datetime.now().isoformat()
         }
