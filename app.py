@@ -330,6 +330,34 @@ def handle_message(event):
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if re.match(email_pattern, text.strip()):
             email = text.strip().lower()
+            
+            # データベースにユーザー情報を保存
+            try:
+                import psycopg2
+                database_url = os.getenv('DATABASE_URL')
+                if database_url and database_url.startswith('postgresql://'):
+                    with psycopg2.connect(database_url) as conn:
+                        with conn.cursor() as cursor:
+                            # ユーザーが存在するかチェック
+                            cursor.execute('SELECT id FROM users WHERE line_user_id = %s', (user_id,))
+                            existing_user = cursor.fetchone()
+                            
+                            if existing_user:
+                                # 既存ユーザーの場合、メールアドレスを更新
+                                cursor.execute('UPDATE users SET email = %s WHERE line_user_id = %s', (email, user_id))
+                                logger.info(f"Updated email for existing user: {user_id} -> {email}")
+                            else:
+                                # 新規ユーザーの場合、INSERT
+                                cursor.execute('''
+                                    INSERT INTO users (email, line_user_id, stripe_customer_id) 
+                                    VALUES (%s, %s, %s)
+                                ''', (email, user_id, f'cus_{user_id}'))
+                                logger.info(f"Created new user: {user_id} with email: {email}")
+                            
+                            conn.commit()
+            except Exception as e:
+                logger.error(f"Error saving user to database: {e}")
+            
             session_manager.update_session(user_id, {
                 'email': email,
                 'state': 'registration',
