@@ -183,6 +183,8 @@ def handle_message(event):
     restriction_result = safe_check_restriction(user_id, email, "AI経理秘書")
     if restriction_result.get("is_restricted"):
         logger.info(f"User {user_id} is restricted from using the service")
+        # 制限されたユーザーのセッション情報を完全にクリア
+        session_manager.clear_session(user_id)
         try:
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
@@ -201,6 +203,23 @@ def handle_message(event):
     if text.strip() == "キャンセル":
         session_manager.update_session(user_id, {'state': 'menu', 'step': None})
         show_main_menu(event)
+        return
+
+    # 制限されたユーザーの処理
+    if session and session.get('state') == 'restricted':
+        logger.info(f"Restricted user {user_id} attempted to use service")
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                restriction_message = RestrictionChecker().get_restriction_message()
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
+                        messages=[TemplateMessage(**restriction_message)]
+                    )
+                )
+        except Exception as e:
+            logger.error(f"Failed to send restriction message: {e}")
         return
 
     logger.info(f"Received message from {user_id}: {text}")
@@ -365,6 +384,25 @@ def handle_postback(event):
     restriction_result = safe_check_restriction(user_id, email, "AI経理秘書")
     if restriction_result.get("is_restricted"):
         logger.info(f"User {user_id} is restricted from using the service (postback)")
+        # 制限されたユーザーのセッション情報を完全にクリア
+        session_manager.clear_session(user_id)
+        try:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                restriction_message = RestrictionChecker().get_restriction_message()
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
+                        messages=[TemplateMessage(**restriction_message)]
+                    )
+                )
+        except Exception as e:
+            logger.error(f"Failed to send restriction message: {e}")
+        return
+    
+    # 制限されたユーザーの処理
+    if session and session.get('state') == 'restricted':
+        logger.info(f"Restricted user {user_id} attempted to use service (postback)")
         try:
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)

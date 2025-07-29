@@ -381,3 +381,14 @@ class SessionManager:
         except Exception as e:
             logger.error(f"Invoice spreadsheet ID retrieval error: {e}")
             return None 
+
+    def clear_session(self, user_id: str) -> None:
+        """ユーザーのセッションを完全にクリアする"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+                conn.commit()
+                logger.info(f"Session cleared for user: {user_id}")
+        except Exception as e:
+            logger.error(f"Error clearing session for user {user_id}: {e}") 
