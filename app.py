@@ -179,10 +179,12 @@ def handle_message(event):
     session = session_manager.get_session(user_id)
     email = session.get('email') if session else None
     
-    # 利用制限チェック（最初に実行）
-    restriction_result = safe_check_restriction(user_id, email, "AI経理秘書")
-    if restriction_result.get("is_restricted"):
-        logger.info(f"User {user_id} is restricted from using the service")
+    # 新しい判定ロジック: 解約後も期限内であれば使用可能
+    restriction_checker = RestrictionChecker()
+    subscription_result = restriction_checker.check_subscription_status_by_line_user_id(user_id)
+    
+    if not subscription_result.get("is_available"):
+        logger.info(f"User {user_id} is restricted from using the service: {subscription_result.get('reason')}")
         # 制限されたユーザーのセッション情報を完全にクリア
         session_manager.clear_session(user_id)
         try:
@@ -334,10 +336,12 @@ def handle_message(event):
                 'step': 'google_auth'
             })
             
-            # メールアドレスで制限チェック
-            restriction_result = safe_check_restriction(user_id, email, "AI経理秘書")
-            if restriction_result.get("is_restricted"):
-                logger.info(f"User {user_id} is restricted from using the service (email: {email})")
+            # 新しい判定ロジック: 解約後も期限内であれば使用可能
+            restriction_checker = RestrictionChecker()
+            subscription_result = restriction_checker.check_subscription_status_by_line_user_id(user_id)
+            
+            if not subscription_result.get("is_available"):
+                logger.info(f"User {user_id} is restricted from using the service (email: {email}): {subscription_result.get('reason')}")
                 # 制限されたユーザーのセッション情報を完全にクリア
                 session_manager.clear_session(user_id)
                 try:
@@ -424,10 +428,12 @@ def handle_postback(event):
     session = session_manager.get_session(user_id)
     email = session.get('email') if session else None
     
-    # 利用制限チェック（最初に実行）
-    restriction_result = safe_check_restriction(user_id, email, "AI経理秘書")
-    if restriction_result.get("is_restricted"):
-        logger.info(f"User {user_id} is restricted from using the service (postback)")
+    # 新しい判定ロジック: 解約後も期限内であれば使用可能
+    restriction_checker = RestrictionChecker()
+    subscription_result = restriction_checker.check_subscription_status_by_line_user_id(user_id)
+    
+    if not subscription_result.get("is_available"):
+        logger.info(f"User {user_id} is restricted from using the service (postback): {subscription_result.get('reason')}")
         # 制限されたユーザーのセッション情報を完全にクリア
         session_manager.clear_session(user_id)
         try:
@@ -1891,15 +1897,16 @@ def download_pdf_sheet(spreadsheet_id, sheet_name):
 
 @app.route('/test/restriction/<line_user_id>')
 def test_restriction_check(line_user_id):
-    """制限チェック機能のテスト用エンドポイント"""
+    """制限チェック機能のテスト用エンドポイント（新しい判定ロジック）"""
     try:
         email = request.args.get('email')  # クエリパラメータからメールアドレスを取得
-        restriction_result = safe_check_restriction(line_user_id, email, "AI経理秘書")
+        restriction_checker = RestrictionChecker()
+        subscription_result = restriction_checker.check_subscription_status_by_line_user_id(line_user_id)
         return {
             "line_user_id": line_user_id,
             "email": email,
-            "restriction_result": restriction_result,
-            "usage_logs_check": "usage_logsテーブルを参照して制限を判定",
+            "subscription_result": subscription_result,
+            "check_method": "subscription_periodsテーブルでサブスクリプション状態を判定",
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
@@ -1946,9 +1953,10 @@ def health_check_restriction():
 
 @app.route('/test/restriction/<line_user_id>')
 def test_restriction(line_user_id):
-    """制限チェックのテスト用エンドポイント"""
+    """制限チェックのテスト用エンドポイント（新しい判定ロジック）"""
     email = request.args.get('email')
-    result = safe_check_restriction(line_user_id, email)
+    restriction_checker = RestrictionChecker()
+    result = restriction_checker.check_subscription_status_by_line_user_id(line_user_id)
     return jsonify(result)
 
 @app.route('/health/restriction')

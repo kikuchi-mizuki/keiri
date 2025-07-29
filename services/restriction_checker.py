@@ -69,71 +69,223 @@ class RestrictionChecker:
                     
                     user_id, user_email, user_line_id = user
                     
-                    # アクティブな契約をチェック
+                    # 新しい判定ロジック: subscription_periodsテーブルでサブスクリプション状態をチェック
                     cursor.execute("""
-                        SELECT id, content_type, start_date, end_date, status
-                        FROM subscriptions 
-                        WHERE user_id = %s 
-                        AND content_type = %s 
-                        AND status = 'active'
-                        AND end_date > CURRENT_TIMESTAMP
-                        ORDER BY end_date DESC
+                        SELECT subscription_status, current_period_end, stripe_subscription_id
+                        FROM subscription_periods 
+                        WHERE user_id = %s AND stripe_subscription_id IS NOT NULL
+                        ORDER BY created_at DESC
                         LIMIT 1
-                    """, (user_id, self.content_type))
+                    """, (user_id,))
                     
-                    subscription = cursor.fetchone()
+                    subscription_period = cursor.fetchone()
                     
-                    if subscription:
-                        sub_id, sub_content_type, start_date, end_date, status = subscription
-                        logger.info(f"Active subscription found for user {user_id}: end_date={end_date}")
-                        return {
-                            "is_restricted": False,
-                            "reason": "active_subscription",
-                            "subscription_info": {
-                                "id": sub_id,
-                                "content_type": sub_content_type,
-                                "start_date": start_date,
-                                "end_date": end_date,
-                                "status": status
-                            }
-                        }
-                    else:
-                        # 契約がない場合、usage_logsの最新記録をチェック（後方互換性）
-                        cursor.execute("""
-                            SELECT MAX(created) as last_usage
-                            FROM usage_logs 
-                            WHERE user_id = %s 
-                            AND content_type = %s
-                        """, (user_id, self.content_type))
+                    if subscription_period:
+                        subscription_status, current_period_end, stripe_subscription_id = subscription_period
                         
-                        last_usage_result = cursor.fetchone()
-                        last_usage = last_usage_result[0] if last_usage_result else None
+                        # 解約制限の判定基準
+                        restricted_statuses = ['canceled', 'incomplete', 'incomplete_expired', 'unpaid', 'past_due']
+                        active_statuses = ['active', 'trialing']
                         
-                        if last_usage:
-                            # 最後の使用から30日以内なら一時的に許可（移行期間）
-                            days_since_last_usage = (datetime.now(timezone.utc) - last_usage).days
-                            if days_since_last_usage <= 30:
-                                logger.info(f"User {user_id} has recent usage (within 30 days): {days_since_last_usage} days ago")
-                                return {
-                                    "is_restricted": False,
-                                    "reason": "recent_usage_legacy",
-                                    "subscription_info": {
-                                        "last_usage": last_usage,
-                                        "days_since_last_usage": days_since_last_usage
-                                    }
+                        if subscription_status in restricted_statuses:
+                            logger.info(f"User {user_id} has restricted subscription status: {subscription_status}")
+                            return {
+                                "is_restricted": True,
+                                "reason": f"subscription_{subscription_status}",
+                                "subscription_info": {
+                                    "subscription_status": subscription_status,
+                                    "current_period_end": current_period_end,
+                                    "stripe_subscription_id": stripe_subscription_id
                                 }
-                        
-                        logger.info(f"User {user_id} has no active subscription or recent usage")
+                            }
+                        elif subscription_status in active_statuses:
+                            # アクティブな状態でも、期間終了をチェック
+                            if current_period_end:
+                                # タイムゾーンを統一して比較
+                                if current_period_end.tzinfo is None:
+                                    # タイムゾーン情報がない場合はUTCとして扱う
+                                    current_period_end_utc = current_period_end.replace(tzinfo=timezone.utc)
+                                else:
+                                    current_period_end_utc = current_period_end
+                                
+                                if datetime.now(timezone.utc) > current_period_end_utc:
+                                    logger.info(f"User {user_id} subscription period has expired: {current_period_end}")
+                                    return {
+                                        "is_restricted": True,
+                                        "reason": "subscription_period_expired",
+                                        "subscription_info": {
+                                            "subscription_status": subscription_status,
+                                            "current_period_end": current_period_end,
+                                            "stripe_subscription_id": stripe_subscription_id
+                                        }
+                                    }
+                            
+                            logger.info(f"User {user_id} has active subscription: {subscription_status}")
+                            return {
+                                "is_restricted": False,
+                                "reason": "active_subscription",
+                                "subscription_info": {
+                                    "subscription_status": subscription_status,
+                                    "current_period_end": current_period_end,
+                                    "stripe_subscription_id": stripe_subscription_id
+                                }
+                            }
+                        else:
+                            # 不明なステータスの場合は制限
+                            logger.info(f"User {user_id} has unknown subscription status: {subscription_status}")
+                            return {
+                                "is_restricted": True,
+                                "reason": "unknown_subscription_status",
+                                "subscription_info": {
+                                    "subscription_status": subscription_status,
+                                    "current_period_end": current_period_end,
+                                    "stripe_subscription_id": stripe_subscription_id
+                                }
+                            }
+                    else:
+                        # subscription_periodsにレコードが存在しない場合は制限
+                        logger.info(f"User {user_id} has no subscription_periods record")
                         return {
                             "is_restricted": True,
-                            "reason": "no_active_subscription",
+                            "reason": "no_subscription_period",
                             "subscription_info": None
                         }
                         
         except Exception as e:
-            logger.error(f"Database error in check_user_restriction: {e}")
+            logger.error(f"Error checking user restriction: {e}")
             return {
-                "is_restricted": False,  # エラー時は制限しない（安全側）
+                "is_restricted": True,
+                "reason": "database_error",
+                "subscription_info": None
+            }
+    
+    def check_subscription_status_by_line_user_id(self, line_user_id: str) -> Dict[str, Any]:
+        """
+        LINEユーザーIDからサブスクリプション状態をチェックする（新しい判定ロジック）
+        
+        Args:
+            line_user_id: LINEユーザーID
+            
+        Returns:
+            Dict containing:
+            - is_available: bool (利用可能かどうか)
+            - reason: str (判定理由)
+            - subscription_info: Dict (サブスクリプション情報)
+        """
+        if not self.database_url:
+            logger.error("DATABASE_URL not set")
+            return {
+                "is_available": False,
+                "reason": "database_not_configured",
+                "subscription_info": None
+            }
+        
+        try:
+            with psycopg2.connect(self.database_url) as conn:
+                with conn.cursor() as cursor:
+                    # 1. ユーザーIDを取得
+                    cursor.execute("""
+                        SELECT id FROM users WHERE line_user_id = %s
+                    """, (line_user_id,))
+                    
+                    user_result = cursor.fetchone()
+                    if not user_result:
+                        logger.info(f"User not found for line_user_id: {line_user_id}")
+                        return {
+                            "is_available": False,
+                            "reason": "user_not_found",
+                            "subscription_info": None
+                        }
+                    
+                    user_id = user_result[0]
+                    
+                    # 2. subscription_periodsテーブルでサブスクリプション状態をチェック
+                    cursor.execute("""
+                        SELECT subscription_status, current_period_end, stripe_subscription_id
+                        FROM subscription_periods 
+                        WHERE user_id = %s AND stripe_subscription_id IS NOT NULL
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                    """, (user_id,))
+                    
+                    subscription_result = cursor.fetchone()
+                    
+                    # 3. 解約されているかどうかを判定
+                    if not subscription_result:
+                        # レコードが存在しない場合は解約済みとみなす
+                        logger.info(f"No subscription_periods record found for user_id: {user_id}")
+                        return {
+                            "is_available": False,
+                            "reason": "no_subscription_record",
+                            "subscription_info": None
+                        }
+                    
+                    subscription_status, current_period_end, stripe_subscription_id = subscription_result
+                    
+                    # 解約制限の判定基準
+                    restricted_statuses = ['canceled', 'incomplete', 'incomplete_expired', 'unpaid', 'past_due']
+                    active_statuses = ['active', 'trialing']
+                    
+                    if subscription_status in restricted_statuses:
+                        logger.info(f"User {user_id} has restricted status: {subscription_status}")
+                        return {
+                            "is_available": False,
+                            "reason": f"subscription_{subscription_status}",
+                            "subscription_info": {
+                                "subscription_status": subscription_status,
+                                "current_period_end": current_period_end,
+                                "stripe_subscription_id": stripe_subscription_id
+                            }
+                        }
+                    elif subscription_status in active_statuses:
+                        # アクティブな状態でも、期間終了をチェック
+                        if current_period_end:
+                            # タイムゾーンを統一して比較
+                            if current_period_end.tzinfo is None:
+                                # タイムゾーン情報がない場合はUTCとして扱う
+                                current_period_end_utc = current_period_end.replace(tzinfo=timezone.utc)
+                            else:
+                                current_period_end_utc = current_period_end
+                            
+                            if datetime.now(timezone.utc) > current_period_end_utc:
+                                logger.info(f"User {user_id} subscription period has expired: {current_period_end}")
+                                return {
+                                    "is_available": False,
+                                    "reason": "subscription_period_expired",
+                                    "subscription_info": {
+                                        "subscription_status": subscription_status,
+                                        "current_period_end": current_period_end,
+                                        "stripe_subscription_id": stripe_subscription_id
+                                    }
+                                }
+                        
+                        logger.info(f"User {user_id} has active subscription: {subscription_status}")
+                        return {
+                            "is_available": True,
+                            "reason": "active_subscription",
+                            "subscription_info": {
+                                "subscription_status": subscription_status,
+                                "current_period_end": current_period_end,
+                                "stripe_subscription_id": stripe_subscription_id
+                            }
+                        }
+                    else:
+                        # 不明なステータスの場合は制限
+                        logger.info(f"User {user_id} has unknown subscription status: {subscription_status}")
+                        return {
+                            "is_available": False,
+                            "reason": "unknown_subscription_status",
+                            "subscription_info": {
+                                "subscription_status": subscription_status,
+                                "current_period_end": current_period_end,
+                                "stripe_subscription_id": stripe_subscription_id
+                            }
+                        }
+                        
+        except Exception as e:
+            logger.error(f"Error checking subscription status: {e}")
+            return {
+                "is_available": False,
                 "reason": "database_error",
                 "subscription_info": None
             }

@@ -10,6 +10,7 @@ LINE Botを使用して、Google Sheetsで見積書・請求書を自動生成�
 - 既存シートからの選択機能（ページネーション対応）
 - 会社名を含むシート名の自動生成
 - **AI経理秘書 解約制限システム**（契約期間ベース）
+- **解約後も期限内であれば使用可能な判定ロジック**
 
 ## AI経理秘書 解約制限システム
 
@@ -20,6 +21,58 @@ LINE Botを使用して、Google Sheetsで見積書・請求書を自動生成�
 - **契約期間ベースの制限**: `usage_logs`の存在チェックではなく、実際の契約期間で判定
 - **後方互換性**: 既存の`usage_logs`データも考慮（移行期間30日）
 - **柔軟な契約管理**: 契約の作成・延長・キャンセルが可能
+- **解約後も期限内であれば使用可能**: 新しい判定ロジックにより、解約後も期間内であれば利用可能
+
+### 新しい判定ロジック（解約後も期限内であれば使用可能）
+
+#### 判定基準
+- **利用不可（制限対象）**：
+  - `canceled` - 解約済み（期間終了後）
+  - `incomplete` - 支払い未完了
+  - `incomplete_expired` - 支払い期限切れ
+  - `unpaid` - 未払い
+  - `past_due` - 支払い遅延
+  - レコードが存在しない場合
+
+- **利用可能**：
+  - `active` - アクティブ（解約後も期限内であれば利用可能）
+  - `trialing` - トライアル期間中
+
+#### データベース構造
+
+##### subscription_periods テーブル
+```sql
+CREATE TABLE subscription_periods (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    stripe_subscription_id VARCHAR(255) NOT NULL,
+    subscription_status VARCHAR(50) NOT NULL, -- 'active', 'trialing', 'canceled', 'incomplete', 'incomplete_expired', 'unpaid', 'past_due'
+    current_period_start TIMESTAMP,
+    current_period_end TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### 判定ロジック
+```sql
+-- 1. ユーザーIDを取得
+SELECT id FROM users WHERE line_user_id = ?
+
+-- 2. subscription_periodsテーブルでサブスクリプション状態をチェック
+SELECT subscription_status FROM subscription_periods 
+WHERE user_id = ? AND stripe_subscription_id IS NOT NULL
+ORDER BY created_at DESC
+LIMIT 1
+
+-- 3. 解約されているかどうかを判定
+if subscription_status in ['canceled', 'incomplete', 'incomplete_expired', 'unpaid', 'past_due']:
+    return False  # 利用不可
+elif subscription_status in ['active', 'trialing']:
+    return True   # 利用可能
+else:
+    return False  # レコードが存在しない場合は利用不可
+```
 
 ### データベース構造
 
@@ -84,7 +137,7 @@ python app.py
 ## テストエンドポイント
 
 ### 制限チェック
-- `GET /test/restriction/<line_user_id>?email=<email>`: 制限チェックテスト
+- `GET /test/restriction/<line_user_id>?email=<email>`: 制限チェックテスト（新しい判定ロジック）
 - `GET /health/restriction`: 制限システムのヘルスチェック
 
 ### 契約管理
@@ -121,4 +174,5 @@ railway up
 ## 注意事項
 - 契約期間ベースの制限システムは、既存の`usage_logs`ベースのシステムから移行されます
 - 移行期間中（30日）は、`usage_logs`の最新記録も考慮されます
-- 本格運用前に、既存データの移行戦略を慎重に検討してください 
+- 本格運用前に、既存データの移行戦略を慎重に検討してください
+- 新しい判定ロジックにより、解約後も期間内であれば利用可能になります 
