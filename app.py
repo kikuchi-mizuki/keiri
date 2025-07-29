@@ -338,6 +338,8 @@ def handle_message(event):
             restriction_result = safe_check_restriction(user_id, email, "AI経理秘書")
             if restriction_result.get("is_restricted"):
                 logger.info(f"User {user_id} is restricted from using the service (email: {email})")
+                # 制限されたユーザーのセッション情報を完全にクリア
+                session_manager.clear_session(user_id)
                 try:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
