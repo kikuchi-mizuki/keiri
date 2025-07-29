@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from flask import Flask, request, abort, redirect, url_for, send_file, after_this_request
 from linebot.v3.messaging import (
-    MessagingApi, Configuration, ApiClient, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage, UriAction
+    MessagingApi, Configuration, ApiClient, PushMessageRequest, TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction, QuickReply, QuickReplyItem, MessageAction, ApiException, ErrorResponse, FlexMessage, URIAction
 )
 from linebot.v3.webhooks.models import MessageEvent, PostbackEvent
 from linebot.v3.webhook import WebhookHandler
@@ -193,11 +193,11 @@ def handle_message(event):
                     title="AI経理秘書の利用制限",
                     text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
                     actions=[
-                        UriAction(
+                        URIAction(
                             label="AIコレクションズ公式LINE",
                             uri="https://line.me/R/ti/p/@ai_collections"
                         ),
-                        UriAction(
+                        URIAction(
                             label="サービス詳細",
                             uri="https://ai-collections.herokuapp.com"
                         )
@@ -230,11 +230,11 @@ def handle_message(event):
                     title="AI経理秘書の利用制限",
                     text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
                     actions=[
-                        UriAction(
+                        URIAction(
                             label="AIコレクションズ公式LINE",
                             uri="https://line.me/R/ti/p/@ai_collections"
                         ),
-                        UriAction(
+                        URIAction(
                             label="サービス詳細",
                             uri="https://ai-collections.herokuapp.com"
                         )
@@ -346,11 +346,11 @@ def handle_message(event):
                             title="AI経理秘書の利用制限",
                             text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
                             actions=[
-                                UriAction(
+                                URIAction(
                                     label="AIコレクションズ公式LINE",
                                     uri="https://line.me/R/ti/p/@ai_collections"
                                 ),
-                                UriAction(
+                                URIAction(
                                     label="サービス詳細",
                                     uri="https://ai-collections.herokuapp.com"
                                 )
@@ -436,11 +436,11 @@ def handle_postback(event):
                     title="AI経理秘書の利用制限",
                     text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
                     actions=[
-                        UriAction(
+                        URIAction(
                             label="AIコレクションズ公式LINE",
                             uri="https://line.me/R/ti/p/@ai_collections"
                         ),
-                        UriAction(
+                        URIAction(
                             label="サービス詳細",
                             uri="https://ai-collections.herokuapp.com"
                         )
@@ -467,11 +467,11 @@ def handle_postback(event):
                     title="AI経理秘書の利用制限",
                     text="AI経理秘書は解約されているため、公式LINEを利用できません。AIコレクションズの公式LINEで再度ご登録いただき、サービスをご利用ください。",
                     actions=[
-                        UriAction(
+                        URIAction(
                             label="AIコレクションズ公式LINE",
                             uri="https://line.me/R/ti/p/@ai_collections"
                         ),
-                        UriAction(
+                        URIAction(
                             label="サービス詳細",
                             uri="https://ai-collections.herokuapp.com"
                         )
