@@ -487,6 +487,15 @@ def handle_postback(event):
     
     elif data == 'confirm_generate':
         session = session_manager.get_session(user_id)
+        if not session:
+            # セッションが存在しない場合は新規作成
+            session_manager.create_session(user_id, {
+                'state': 'document_creation',
+                'document_type': 'estimate',
+                'step': 'generate'
+            })
+            session = session_manager.get_session(user_id)
+        
         session_manager.update_session(user_id, {'step': 'generate'})
         # 進行中メッセージをreplyで送信
         doc_type = session.get('document_type', 'estimate')
@@ -572,15 +581,26 @@ def handle_postback(event):
         # 既存シートを選択
         spreadsheet_id = data.replace('select_sheet_', '')
         session = session_manager.get_session(user_id)
-        doc_type = session.get('document_type')
         
-        session_manager.update_session(user_id, {
-            'selected_spreadsheet_id': spreadsheet_id,
-            'step': 'client_name',
-            'creation_method': 'existing_sheet'
-        })
+        # セッションが存在しない場合は新規作成
+        if not session:
+            session_manager.create_session(user_id, {
+                'state': 'document_creation',
+                'document_type': 'estimate',  # デフォルト値
+                'step': 'client_name',
+                'creation_method': 'existing_sheet',
+                'selected_spreadsheet_id': spreadsheet_id
+            })
+            doc_name = "見積書"
+        else:
+            doc_type = session.get('document_type', 'estimate')  # デフォルト値を設定
+            session_manager.update_session(user_id, {
+                'selected_spreadsheet_id': spreadsheet_id,
+                'step': 'client_name',
+                'creation_method': 'existing_sheet'
+            })
+            doc_name = "見積書" if doc_type == 'estimate' else "請求書"
         
-        doc_name = "見積書" if doc_type == 'estimate' else "請求書"
         try:
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
