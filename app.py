@@ -272,104 +272,36 @@ def handle_message(event):
             return
     
     if not session:
-        # 新規ユーザー - 最初にメールアドレスを聞く
-        session_manager.create_session(user_id, {'state': 'email_input', 'step': 'email'})
-        try:
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.push_message(
-                    PushMessageRequest(
-                        to=user_id,
-                        messages=[TextMessage(text="👩‍💼LINE見積書・請求書Botへようこそ！\n\nまずはメールアドレスを教えてください。\n\n※AIコレクションズで登録したメールアドレスを入力してください。")]
-                    )
-                )
-        except Exception as e:
-            print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
-        return
-    
-    # メールアドレス入力ステップの処理
-    if session.get('state') == 'email_input' and session.get('step') == 'email':
-        # メールアドレスの形式チェック
-        import re
-        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if re.match(email_pattern, text.strip()):
-            email = text.strip().lower()
-            
-            # データベースにユーザー情報を保存
-            try:
-                import psycopg2
-                database_url = os.getenv('DATABASE_URL')
-                if database_url and database_url.startswith('postgresql://'):
-                    with psycopg2.connect(database_url) as conn:
-                        with conn.cursor() as cursor:
-                            # ユーザーが存在するかチェック
-                            cursor.execute('SELECT id FROM users WHERE line_user_id = %s', (user_id,))
-                            existing_user = cursor.fetchone()
-                            
-                            if existing_user:
-                                # 既存ユーザーの場合、メールアドレスを更新
-                                cursor.execute('UPDATE users SET email = %s WHERE line_user_id = %s', (email, user_id))
-                                logger.info(f"Updated email for existing user: {user_id} -> {email}")
-                            else:
-                                # 新規ユーザーの場合、INSERT
-                                cursor.execute('''
-                                    INSERT INTO users (email, line_user_id, stripe_customer_id) 
-                                    VALUES (%s, %s, %s)
-                                ''', (email, user_id, f'cus_{user_id}'))
-                                logger.info(f"Created new user: {user_id} with email: {email}")
-                            
-                            conn.commit()
-            except Exception as e:
-                logger.error(f"Error saving user to database: {e}")
-            
-            session_manager.update_session(user_id, {
-                'email': email,
-                'state': 'registration',
-                'step': 'google_auth'
-            })
-            
-
-            
-            # 制限がない場合はGoogle認証に進む
-            auth_url = auth_service.get_auth_url(user_id)
-            if auth_url:
-                try:
-                    with ApiClient(configuration) as api_client:
-                        line_bot_api = MessagingApi(api_client)
-                        line_bot_api.push_message(
-                            PushMessageRequest(
-                                to=user_id,
-                                messages=[TextMessage(text=f"✅ メールアドレスを確認しました。\n\n次にGoogle認証を行ってください。\n以下のリンクからGoogle Driveへのアクセスを許可してください：\n\n{auth_url}")]
-                            )
-                        )
-                except Exception as e:
-                    print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
-            else:
-                try:
-                    with ApiClient(configuration) as api_client:
-                        line_bot_api = MessagingApi(api_client)
-                        line_bot_api.push_message(
-                            PushMessageRequest(
-                                to=user_id,
-                                messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。しばらく時間をおいて再度お試しください。")]
-                            )
-                        )
-                except Exception as e:
-                    print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
-        else:
-            # 無効なメールアドレス
+        # 新規ユーザー - 直接Google認証に進む
+        auth_url = auth_service.get_auth_url(user_id)
+        if auth_url:
+            session_manager.create_session(user_id, {'state': 'registration', 'step': 'google_auth'})
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
                     line_bot_api.push_message(
                         PushMessageRequest(
                             to=user_id,
-                            messages=[TextMessage(text="❌ 有効なメールアドレスを入力してください。\n\n例：example@example.com")]
+                            messages=[TextMessage(text="👩‍💼LINE見積書・請求書Botへようこそ！\n\nGoogle認証を行ってください。\n以下のリンクからGoogle Driveへのアクセスを許可してください：\n\n" + auth_url)]
+                        )
+                    )
+            except Exception as e:
+                print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
+        else:
+            try:
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.push_message(
+                        PushMessageRequest(
+                            to=user_id,
+                            messages=[TextMessage(text="❌ Google認証URLの生成に失敗しました。しばらく時間をおいて再度お試しください。")]
                         )
                     )
             except Exception as e:
                 print(f"[ERROR] handle_message: push_message送信時に例外発生: {e}")
         return
+    
+
 
     # 既存ユーザーの処理
     handle_existing_user(event, session, text)
