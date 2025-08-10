@@ -19,7 +19,7 @@ from services.google_sheets_service import GoogleSheetsService
 from services.document_generator import DocumentGenerator
 from services.auth_service import AuthService
 from services.pdf_generator import PDFGenerator
-from services.restriction_checker import safe_check_restriction, RestrictionChecker
+from services.restriction_checker import safe_check_restriction
 
 # 環境変数の読み込み
 load_dotenv()
@@ -178,42 +178,6 @@ def handle_message(event):
     # セッション情報の取得（制限チェック用）
     session = session_manager.get_session(user_id)
     email = session.get('email') if session else None
-    
-    # 新しい判定ロジック: 解約後も期限内であれば使用可能
-    restriction_checker = RestrictionChecker()
-    subscription_result = restriction_checker.check_subscription_status_by_line_user_id(user_id)
-    
-    if not subscription_result.get("is_available"):
-        logger.info(f"User {user_id} is restricted from using the service: {subscription_result.get('reason')}")
-        # 制限されたユーザーのセッション情報を完全にクリア
-        session_manager.clear_session(user_id)
-        try:
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
-                template = ButtonsTemplate(
-                    title="AI経理秘書の利用制限",
-                    text="AI経理秘書は解約されています。公式LINEで再登録してください。",
-                    actions=[
-                        URIAction(
-                            label="AIコレクションズ公式LINE",
-                            uri="https://lin.ee/eyYpOKq"
-                        ),
-                        URIAction(
-                            label="サービス詳細",
-                            uri="https://lp-production-9e2c.up.railway.app/"
-                        )
-                    ]
-                )
-                line_bot_api.push_message(
-                    PushMessageRequest(
-                        to=user_id,
-                        messages=[TemplateMessage(alt_text="AI経理秘書の利用制限", template=template)]
-                    )
-                )
-        except Exception as e:
-            logger.error(f"Failed to send restriction message: {e}")
-        return
 
     # キャンセル対応
     if text.strip() == "キャンセル":
@@ -364,41 +328,7 @@ def handle_message(event):
                 'step': 'google_auth'
             })
             
-            # 新しい判定ロジック: 解約後も期限内であれば使用可能
-            restriction_checker = RestrictionChecker()
-            subscription_result = restriction_checker.check_subscription_status_by_line_user_id(user_id)
-            
-            if not subscription_result.get("is_available"):
-                logger.info(f"User {user_id} is restricted from using the service (email: {email}): {subscription_result.get('reason')}")
-                # 制限されたユーザーのセッション情報を完全にクリア
-                session_manager.clear_session(user_id)
-                try:
-                    with ApiClient(configuration) as api_client:
-                        line_bot_api = MessagingApi(api_client)
-                        # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
-                        template = ButtonsTemplate(
-                            title="AI経理秘書の利用制限",
-                            text="AI経理秘書は解約されています。公式LINEで再登録してください。",
-                            actions=[
-                                URIAction(
-                                    label="AIコレクションズ公式LINE",
-                                    uri="https://lin.ee/eyYpOKq"
-                                ),
-                                URIAction(
-                                    label="サービス詳細",
-                                    uri="https://lp-production-9e2c.up.railway.app/"
-                                )
-                            ]
-                        )
-                        line_bot_api.push_message(
-                            PushMessageRequest(
-                                to=user_id,
-                                messages=[TemplateMessage(alt_text="AI経理秘書の利用制限", template=template)]
-                            )
-                        )
-                except Exception as e:
-                    logger.error(f"Failed to send restriction message: {e}")
-                return
+
             
             # 制限がない場合はGoogle認証に進む
             auth_url = auth_service.get_auth_url(user_id)
@@ -455,42 +385,6 @@ def handle_postback(event):
     # セッション情報の取得（制限チェック用）
     session = session_manager.get_session(user_id)
     email = session.get('email') if session else None
-    
-    # 新しい判定ロジック: 解約後も期限内であれば使用可能
-    restriction_checker = RestrictionChecker()
-    subscription_result = restriction_checker.check_subscription_status_by_line_user_id(user_id)
-    
-    if not subscription_result.get("is_available"):
-        logger.info(f"User {user_id} is restricted from using the service (postback): {subscription_result.get('reason')}")
-        # 制限されたユーザーのセッション情報を完全にクリア
-        session_manager.clear_session(user_id)
-        try:
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                # LINE Bot SDK v3の正しい形式でTemplateMessageを作成
-                template = ButtonsTemplate(
-                    title="AI経理秘書の利用制限",
-                    text="AI経理秘書は解約されています。公式LINEで再登録してください。",
-                    actions=[
-                        URIAction(
-                            label="AIコレクションズ公式LINE",
-                            uri="https://lin.ee/eyYpOKq"
-                        ),
-                        URIAction(
-                            label="サービス詳細",
-                            uri="https://lp-production-9e2c.up.railway.app/"
-                        )
-                    ]
-                )
-                line_bot_api.push_message(
-                    PushMessageRequest(
-                        to=user_id,
-                        messages=[TemplateMessage(alt_text="AI経理秘書の利用制限", template=template)]
-                    )
-                )
-        except Exception as e:
-            logger.error(f"Failed to send restriction message: {e}")
-        return
     
     # 制限されたユーザーの処理
     if session and session.get('state') == 'restricted':
@@ -1925,16 +1819,15 @@ def download_pdf_sheet(spreadsheet_id, sheet_name):
 
 @app.route('/test/restriction/<line_user_id>')
 def test_restriction_check(line_user_id):
-    """制限チェック機能のテスト用エンドポイント（新しい判定ロジック）"""
+    """制限チェック機能のテスト用エンドポイント"""
     try:
         email = request.args.get('email')  # クエリパラメータからメールアドレスを取得
-        restriction_checker = RestrictionChecker()
-        subscription_result = restriction_checker.check_subscription_status_by_line_user_id(line_user_id)
+        restriction_result = safe_check_restriction(line_user_id, email, "AI経理秘書")
         return {
             "line_user_id": line_user_id,
             "email": email,
-            "subscription_result": subscription_result,
-            "check_method": "subscription_periodsテーブルでサブスクリプション状態を判定",
+            "restriction_result": restriction_result,
+            "usage_logs_check": "usage_logsテーブルを参照して制限を判定",
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
@@ -1981,10 +1874,9 @@ def health_check_restriction():
 
 @app.route('/test/restriction/<line_user_id>')
 def test_restriction(line_user_id):
-    """制限チェックのテスト用エンドポイント（新しい判定ロジック）"""
+    """制限チェックのテスト用エンドポイント"""
     email = request.args.get('email')
-    restriction_checker = RestrictionChecker()
-    result = restriction_checker.check_subscription_status_by_line_user_id(line_user_id)
+    result = safe_check_restriction(line_user_id, email)
     return jsonify(result)
 
 @app.route('/health/restriction')
