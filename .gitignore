@@ -1,29 +1,42 @@
+# OS / tools
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
 
-# Virtual Environment
+# Environments
 .env
-.venv
-env/
+.env.*
+.venv/
 venv/
-ENV/
-
-# Database
-*.db
-*.sqlite3
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
 
 # Logs
-*.log 
+*.log
+logs/
+*/monitoring/*.log
+nohup.out
+
+# Build / cache
+.dist/
+build/
+dist/
+.sass-cache/
+.pytest_cache/
+.coverage*
+htmlcov/
+
+# Node (if any)
+node_modules/
+
+# Editor
+.vscode/
+.idea/
+
+# Databases
+*.sqlite3
+*.db

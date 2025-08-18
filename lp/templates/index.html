@@ -22,9 +22,9 @@
             <div class="hero-content">
                 <h1 class="hero-title">AIがあなたの<br>秘書になる時代</h1>
                 <p class="hero-subtitle">スマホに話しかけるだけで<br>日常のタスクがどんどん片付いていく</p>
-                <form id="subscription-form" class="hero-form">
-                    <input type="text" name="company_name" placeholder="企業名を入力" required class="hero-input">
-                    <input type="email" name="email" placeholder="メールアドレスを入力" required class="hero-input">
+                <form id="subscription-form" class="hero-form" aria-label="無料トライアル申し込みフォーム">
+                    <input type="text" name="company_name" placeholder="企業名を入力" required class="hero-input" aria-label="企業名" autocomplete="organization">
+                    <input type="email" name="email" placeholder="メールアドレスを入力" required class="hero-input" aria-label="メールアドレス" autocomplete="email">
                     <button type="submit" class="hero-btn">２週間無料トライアル中！</button>
                 </form>
             </div>
@@ -132,7 +132,7 @@
 
         <!-- CTA Section -->
         <section class="cta-section">
-            <a href="#" class="cta-btn">今すぐAIコレクションズを始める</a>
+            <a href="#subscription-form" class="cta-btn">今すぐAIコレクションズを始める</a>
         </section>
     </main>
 
@@ -151,10 +151,13 @@
             const companyName = document.querySelector('input[name="company_name"]').value;
             const email = document.querySelector('input[name="email"]').value;
             const submitButton = document.querySelector('.hero-btn');
+            const formEl = document.getElementById('subscription-form');
             
             // ボタンを無効化
             submitButton.disabled = true;
             submitButton.textContent = '処理中...';
+            submitButton.setAttribute('aria-disabled', 'true');
+            formEl.setAttribute('aria-busy', 'true');
             
             try {
                 const response = await fetch('/company-registration', {
@@ -174,6 +177,8 @@
                     alert('エラーが発生しました: ' + data.error);
                     submitButton.disabled = false;
                     submitButton.textContent = '２週間無料トライアル中！';
+                    submitButton.removeAttribute('aria-disabled');
+                    formEl.removeAttribute('aria-busy');
                     return;
                 }
                 
@@ -185,6 +190,8 @@
                 alert('エラーが発生しました。もう一度お試しください。');
                 submitButton.disabled = false;
                 submitButton.textContent = '２週間無料トライアル中！';
+                submitButton.removeAttribute('aria-disabled');
+                formEl.removeAttribute('aria-busy');
             }
         });
     </script>
