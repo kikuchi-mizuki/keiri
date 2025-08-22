@@ -66,6 +66,42 @@ pdf_generator = PDFGenerator()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+@app.route("/")
+def index():
+    """ルートパス - アプリケーションの状態確認用"""
+    return """
+    <html>
+    <head>
+        <title>AI経理秘書 LINE Bot</title>
+        <meta charset="utf-8">
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .status { color: green; font-weight: bold; }
+            .info { background: #f0f0f0; padding: 20px; border-radius: 5px; }
+        </style>
+    </head>
+    <body>
+        <h1>🤖 AI経理秘書 LINE Bot</h1>
+        <p class="status">✅ アプリケーションは正常に動作しています</p>
+        
+        <div class="info">
+            <h2>📱 使用方法</h2>
+            <p>このアプリケーションはLINE Botとして動作します。</p>
+            <p>LINEアプリでボットにメッセージを送信してください。</p>
+            
+            <h2>🔗 利用可能なエンドポイント</h2>
+            <ul>
+                <li><strong>/callback</strong> - LINE Webhook</li>
+                <li><strong>/auth/callback</strong> - Google OAuth認証</li>
+                <li><strong>/health</strong> - ヘルスチェック</li>
+            </ul>
+        </div>
+        
+        <p><small>デプロイ日時: {}</small></p>
+    </body>
+    </html>
+    """.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
 @app.route("/callback", methods=['POST'])
 def callback():
     """LINE Webhookからのコールバック処理"""
