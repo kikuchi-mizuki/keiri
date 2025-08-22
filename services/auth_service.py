@@ -17,6 +17,7 @@ class AuthService:
         # 環境変数のデバッグ
         print(f"[DEBUG] GOOGLE_CLIENT_SECRETS_JSON exists: {os.getenv('GOOGLE_CLIENT_SECRETS_JSON') is not None}")
         print(f"[DEBUG] GOOGLE_CLIENT_SECRETS_FILE: {os.getenv('GOOGLE_CLIENT_SECRETS_FILE')}")
+        print(f"[DEBUG] GOOGLE_CLIENT_SECRETS_JSON value: {os.getenv('GOOGLE_CLIENT_SECRETS_JSON')[:100] if os.getenv('GOOGLE_CLIENT_SECRETS_JSON') else 'None'}...")
         
         # 環境変数からJSON文字列を取得してファイルとして保存
         client_secrets_env = os.getenv('GOOGLE_CLIENT_SECRETS_JSON')
