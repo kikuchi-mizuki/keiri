@@ -60,7 +60,10 @@ class AuthService:
             'https://www.googleapis.com/auth/drive.file',
             'https://www.googleapis.com/auth/calendar'
         ]
-        self.redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5000/auth/callback')
+        # リダイレクトURIの設定（新しいプロジェクトのURLに合わせる）
+        default_redirect_uri = os.getenv('SERVER_URL', 'http://localhost:5000') + '/auth/callback'
+        self.redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', default_redirect_uri)
+        print(f"[DEBUG] Google OAuth redirect_uri: {self.redirect_uri}")
         
         # ファイルの存在確認と内容チェック
         print(f"[DEBUG] client_secrets_file path: {self.client_secrets_file}")
@@ -91,8 +94,11 @@ class AuthService:
     def get_auth_url(self, user_id):
         """認証URLを生成"""
         if not hasattr(self, 'google_oauth_enabled') or not self.google_oauth_enabled:
+            print("[DEBUG] Google OAuth is disabled")
             return None
         try:
+            print(f"[DEBUG] get_auth_url: user_id={user_id}")
+            print(f"[DEBUG] get_auth_url: redirect_uri={self.redirect_uri}")
             # 環境変数からJSON文字列を取得してファイルとして保存
             client_secrets_env = os.getenv('GOOGLE_CLIENT_SECRETS_JSON')
             if client_secrets_env:
