@@ -27,10 +27,11 @@ class AuthService:
             print("[WARNING] GOOGLE_CLIENT_SECRETS_JSON environment variable is not set")
             print("[WARNING] Google OAuth features will be disabled")
             self.google_oauth_enabled = False
-            return
+            # 早期リターンを削除し、後続の処理を実行
         else:
             self.google_oauth_enabled = True
         
+        # client_secrets_envが設定されている場合のみファイル作成処理を実行
         if client_secrets_env:
             try:
                 # 絶対パスでclient_secrets.jsonファイルを指定
@@ -66,31 +67,37 @@ class AuthService:
         self.redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', default_redirect_uri)
         print(f"[DEBUG] Google OAuth redirect_uri: {self.redirect_uri}")
         
-        # ファイルの存在確認と内容チェック
-        print(f"[DEBUG] client_secrets_file path: {self.client_secrets_file}")
-        if os.path.exists(self.client_secrets_file):
-            try:
-                with open(self.client_secrets_file, 'r') as f:
-                    content = f.read()
-                    print(f"[DEBUG] client_secrets.json content length: {len(content)}")
-                    if len(content.strip()) == 0:
-                        raise Exception("client_secrets.json is empty")
-                    # JSONとして解析できるかテスト
-                    json.loads(content)
-                    print("[DEBUG] client_secrets.json is valid JSON")
-            except Exception as e:
-                print(f"[ERROR] client_secrets.json validation failed: {e}")
-                raise
+        # client_secrets_envが設定されている場合のみファイルチェックとフロー設定を実行
+        if client_secrets_env:
+            # ファイルの存在確認と内容チェック
+            print(f"[DEBUG] client_secrets_file path: {self.client_secrets_file}")
+            if os.path.exists(self.client_secrets_file):
+                try:
+                    with open(self.client_secrets_file, 'r') as f:
+                        content = f.read()
+                        print(f"[DEBUG] client_secrets.json content length: {len(content)}")
+                        if len(content.strip()) == 0:
+                            raise Exception("client_secrets.json is empty")
+                        # JSONとして解析できるかテスト
+                        json.loads(content)
+                        print("[DEBUG] client_secrets.json is valid JSON")
+                except Exception as e:
+                    print(f"[ERROR] client_secrets.json validation failed: {e}")
+                    raise
+            else:
+                print(f"[ERROR] client_secrets.json file not found at: {self.client_secrets_file}")
+                raise FileNotFoundError(f"client_secrets.json not found at {self.client_secrets_file}")
+            
+            # 認証フローの設定
+            self.flow = Flow.from_client_secrets_file(
+                self.client_secrets_file,
+                scopes=self.scopes,
+                redirect_uri=self.redirect_uri
+            )
         else:
-            print(f"[ERROR] client_secrets.json file not found at: {self.client_secrets_file}")
-            raise FileNotFoundError(f"client_secrets.json not found at {self.client_secrets_file}")
-        
-        # 認証フローの設定
-        self.flow = Flow.from_client_secrets_file(
-            self.client_secrets_file,
-            scopes=self.scopes,
-            redirect_uri=self.redirect_uri
-        )
+            # Google OAuthが無効な場合の処理
+            print("[DEBUG] Google OAuth is disabled - skipping flow setup")
+            self.flow = None
     
     def get_auth_url(self, user_id):
         """認証URLを生成"""
