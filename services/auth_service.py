@@ -90,8 +90,11 @@ class AuthService:
     
     def get_auth_url(self, user_id):
         """認証URLを生成"""
+<<<<<<< HEAD
         if not hasattr(self, 'google_oauth_enabled') or not self.google_oauth_enabled:
             return None
+=======
+>>>>>>> a31ffef2953b21e652bb77f3f48f972f4b778469
         try:
             # 環境変数からJSON文字列を取得してファイルとして保存
             client_secrets_env = os.getenv('GOOGLE_CLIENT_SECRETS_JSON')
