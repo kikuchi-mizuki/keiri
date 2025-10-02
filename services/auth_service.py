@@ -140,6 +140,7 @@ class AuthService:
                 prompt='consent',
                 state=user_id  # stateパラメータとしてuser_idを渡す
             )
+            print(f"[DEBUG] get_auth_url: access_type=offline, prompt=consent")
             print(f"[DEBUG] get_auth_url: auth_url={auth_url}")
             logger.info(f"Auth URL generated for user: {user_id}")
             return auth_url
@@ -202,6 +203,7 @@ class AuthService:
                 'scopes': credentials.scopes
             }
             print(f"[DEBUG] handle_callback: token_info={token_info}")
+            print(f"[DEBUG] handle_callback: refresh_token length={len(credentials.refresh_token) if credentials.refresh_token else 0}")
 
             # セッション管理に保存
             from .session_manager import SessionManager
@@ -251,6 +253,7 @@ class AuthService:
                 return None
 
             # トークンの有効期限をチェック
+            print(f"[DEBUG] get_credentials: credentials.expired={credentials.expired}, refresh_token exists={credentials.refresh_token is not None}")
             if credentials.expired and credentials.refresh_token:
                 try:
                     print(f"[DEBUG] get_credentials: トークン更新開始 user_id={user_id}")
