@@ -1,6 +1,8 @@
 import json
 import sqlite3
 import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from datetime import datetime, timedelta
 import logging
 import traceback
@@ -11,19 +13,28 @@ class SessionManager:
     """ユーザーセッション管理クラス"""
     
     def __init__(self):
-        db_url = os.getenv('DATABASE_URL', 'sqlite:///sessions.db')
-        # SQLiteファイルパスを抽出
-        if db_url.startswith('sqlite:///'):
-            db_path = db_url.replace('sqlite:///', '')
+        self.db_url = os.getenv('DATABASE_URL', 'sqlite:///sessions.db')
+        self.use_postgres = self.db_url.startswith('postgresql://')
+        
+        if self.use_postgres:
+            print(f"[DEBUG] SessionManager: PostgreSQL使用 - {self.db_url[:50]}...")
+            self._init_postgres_db()
         else:
-            db_path = 'sessions.db'
-        abs_db_path = os.path.abspath(db_path)
-        print(f"[DEBUG] SessionManager: DBファイル絶対パス={abs_db_path}")
-        self.db_path = abs_db_path
-        self._init_db()
+            # SQLiteファイルパスを抽出
+            if self.db_url.startswith('sqlite:///'):
+                db_path = self.db_url.replace('sqlite:///', '')
+            else:
+                db_path = 'sessions.db'
+            abs_db_path = os.path.abspath(db_path)
+            print(f"[DEBUG] SessionManager: SQLite使用 - DBファイル絶対パス={abs_db_path}")
+            self.db_path = abs_db_path
+            self._init_sqlite_db()
+        
+        # データベースの種類をログに出力
+        print(f"[DEBUG] SessionManager: データベースタイプ={'PostgreSQL' if self.use_postgres else 'SQLite'}")
     
-    def _init_db(self):
-        """データベースの初期化"""
+    def _init_sqlite_db(self):
+        """SQLiteデータベースの初期化"""
         try:
             conn = sqlite3.connect(self.db_path, check_same_thread=False)
             cursor = conn.cursor()
@@ -71,22 +82,74 @@ class SessionManager:
             
             conn.commit()
             conn.close()
-            logger.info("Database initialized successfully")
+            logger.info("SQLite Database initialized successfully")
             
         except Exception as e:
-            logger.error(f"Database initialization error: {e}")
+            logger.error(f"SQLite Database initialization error: {e}")
+    
+    def _init_postgres_db(self):
+        """PostgreSQLデータベースの初期化"""
+        try:
+            conn = psycopg2.connect(self.db_url)
+            cursor = conn.cursor()
+            
+            # セッションテーブルの作成
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS sessions (
+                    user_id VARCHAR(255) PRIMARY KEY,
+                    session_data TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # ユーザー情報テーブルの作成
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id VARCHAR(255) PRIMARY KEY,
+                    company_name TEXT,
+                    address TEXT,
+                    bank_account TEXT,
+                    google_refresh_token TEXT,
+                    spreadsheet_id TEXT,
+                    estimate_spreadsheet_id TEXT,
+                    invoice_spreadsheet_id TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            logger.info("PostgreSQL Database initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"PostgreSQL Database initialization error: {e}")
     
     def create_session(self, user_id, session_data):
         """新しいセッションを作成"""
         try:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
-            
-            # 既存のセッションがあれば更新、なければ新規作成
-            cursor.execute('''
-                INSERT OR REPLACE INTO sessions (user_id, session_data, updated_at)
-                VALUES (?, ?, ?)
-            ''', (user_id, json.dumps(session_data), datetime.now()))
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                
+                # PostgreSQL用のUPSERT
+                cursor.execute('''
+                    INSERT INTO sessions (user_id, session_data, updated_at)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (user_id) 
+                    DO UPDATE SET session_data = EXCLUDED.session_data, updated_at = EXCLUDED.updated_at
+                ''', (user_id, json.dumps(session_data), datetime.now()))
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                
+                # SQLite用のUPSERT
+                cursor.execute('''
+                    INSERT OR REPLACE INTO sessions (user_id, session_data, updated_at)
+                    VALUES (?, ?, ?)
+                ''', (user_id, json.dumps(session_data), datetime.now()))
             
             conn.commit()
             conn.close()
