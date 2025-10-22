@@ -161,16 +161,28 @@ class SessionManager:
     def get_session(self, user_id):
         """セッション情報を取得"""
         try:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                SELECT session_data FROM sessions 
-                WHERE user_id = ? AND updated_at > ?
-            ''', (user_id, datetime.now() - timedelta(hours=24)))
-            
-            result = cursor.fetchone()
-            conn.close()
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT session_data FROM sessions 
+                    WHERE user_id = %s AND updated_at > %s
+                ''', (user_id, datetime.now() - timedelta(hours=24)))
+                
+                result = cursor.fetchone()
+                conn.close()
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT session_data FROM sessions 
+                    WHERE user_id = ? AND updated_at > ?
+                ''', (user_id, datetime.now() - timedelta(hours=24)))
+                
+                result = cursor.fetchone()
+                conn.close()
             
             if result:
                 session_data = json.loads(result[0])
@@ -292,26 +304,49 @@ class SessionManager:
         """Google認証トークンを保存"""
         try:
             print(f"[DEBUG] save_google_token: user_id={user_id}, refresh_token={refresh_token}")
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
             
-            # まずユーザーが存在するかチェック
-            cursor.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
-            user_exists = cursor.fetchone()
-            print(f"[DEBUG] save_google_token: user_exists={user_exists}")
-            
-            if user_exists:
-                # 既存ユーザーの場合、UPDATE
-                cursor.execute('''
-                    UPDATE users SET google_refresh_token = ?, updated_at = ?
-                    WHERE user_id = ?
-                ''', (refresh_token, datetime.now(), user_id))
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                
+                # まずユーザーが存在するかチェック
+                cursor.execute('SELECT user_id FROM users WHERE user_id = %s', (user_id,))
+                user_exists = cursor.fetchone()
+                print(f"[DEBUG] save_google_token: user_exists={user_exists}")
+                
+                if user_exists:
+                    # 既存ユーザーの場合、UPDATE
+                    cursor.execute('''
+                        UPDATE users SET google_refresh_token = %s, updated_at = %s
+                        WHERE user_id = %s
+                    ''', (refresh_token, datetime.now(), user_id))
+                else:
+                    # 新規ユーザーの場合、INSERT
+                    cursor.execute('''
+                        INSERT INTO users (user_id, google_refresh_token, created_at, updated_at)
+                        VALUES (%s, %s, %s, %s)
+                    ''', (user_id, refresh_token, datetime.now(), datetime.now()))
             else:
-                # 新規ユーザーの場合、INSERT（他のフィールドはNULLで初期化）
-                cursor.execute('''
-                    INSERT INTO users (user_id, company_name, address, bank_account, google_refresh_token, created_at, updated_at)
-                    VALUES (?, NULL, NULL, NULL, ?, ?, ?)
-                ''', (user_id, refresh_token, datetime.now(), datetime.now()))
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                
+                # まずユーザーが存在するかチェック
+                cursor.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
+                user_exists = cursor.fetchone()
+                print(f"[DEBUG] save_google_token: user_exists={user_exists}")
+                
+                if user_exists:
+                    # 既存ユーザーの場合、UPDATE
+                    cursor.execute('''
+                        UPDATE users SET google_refresh_token = ?, updated_at = ?
+                        WHERE user_id = ?
+                    ''', (refresh_token, datetime.now(), user_id))
+                else:
+                    # 新規ユーザーの場合、INSERT（他のフィールドはNULLで初期化）
+                    cursor.execute('''
+                        INSERT INTO users (user_id, company_name, address, bank_account, google_refresh_token, created_at, updated_at)
+                        VALUES (?, NULL, NULL, NULL, ?, ?, ?)
+                    ''', (user_id, refresh_token, datetime.now(), datetime.now()))
             
             conn.commit()
             conn.close()
@@ -326,14 +361,25 @@ class SessionManager:
         """Google認証トークンを取得"""
         try:
             print(f"[DEBUG] get_google_token: user_id={user_id}")
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
-            # 全カラム取得に変更
-            cursor.execute('''
-                SELECT * FROM users WHERE user_id = ?
-            ''', (user_id,))
-            result = cursor.fetchone()
-            print(f"[DEBUG] get_google_token: 全カラムresult={result}")
+            
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                # 全カラム取得に変更
+                cursor.execute('''
+                    SELECT * FROM users WHERE user_id = %s
+                ''', (user_id,))
+                result = cursor.fetchone()
+                print(f"[DEBUG] get_google_token: 全カラムresult={result}")
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                # 全カラム取得に変更
+                cursor.execute('''
+                    SELECT * FROM users WHERE user_id = ?
+                ''', (user_id,))
+                result = cursor.fetchone()
+                print(f"[DEBUG] get_google_token: 全カラムresult={result}")
             conn.close()
             # 旧来の動作も維持
             if result and len(result) >= 5:
