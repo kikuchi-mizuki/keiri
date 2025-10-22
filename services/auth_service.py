@@ -254,6 +254,7 @@ class AuthService:
 
             # トークンの有効期限をチェック
             print(f"[DEBUG] get_credentials: credentials.expired={credentials.expired}, refresh_token exists={credentials.refresh_token is not None}")
+            print(f"[DEBUG] get_credentials: token expiry info - valid={credentials.valid}, expired={credentials.expired}")
             if credentials.expired and credentials.refresh_token:
                 try:
                     print(f"[DEBUG] get_credentials: トークン更新開始 user_id={user_id}")
@@ -274,6 +275,7 @@ class AuthService:
 
                 except RefreshError as e:
                     print(f"[ERROR] get_credentials: RefreshError for user: {user_id}, error: {e}")
+                    print(f"[ERROR] get_credentials: RefreshError details - error_type={type(e).__name__}, error_message={str(e)}")
                     logger.error(f"Token refresh failed for user: {user_id}, error: {e}")
                     # トークンが無効になった場合は削除
                     session_manager.save_google_token(user_id, None)
@@ -301,6 +303,38 @@ class AuthService:
         except Exception as e:
             logger.error(f"Authentication check error: {e}")
             return False
+    
+    def check_token_status(self, user_id):
+        """トークンの状態を詳細にチェック"""
+        try:
+            from .session_manager import SessionManager
+            session_manager = SessionManager()
+            
+            token_json = session_manager.get_google_token(user_id)
+            if not token_json:
+                return {"status": "no_token", "message": "トークンが保存されていません"}
+            
+            token_info = json.loads(token_json)
+            credentials = Credentials(
+                token=token_info['token'],
+                refresh_token=token_info['refresh_token'],
+                token_uri=token_info['token_uri'],
+                client_id=token_info['client_id'],
+                client_secret=token_info['client_secret'],
+                scopes=token_info['scopes']
+            )
+            
+            return {
+                "status": "valid" if credentials.valid else "expired",
+                "expired": credentials.expired,
+                "valid": credentials.valid,
+                "has_refresh_token": credentials.refresh_token is not None,
+                "token_length": len(credentials.token) if credentials.token else 0,
+                "refresh_token_length": len(credentials.refresh_token) if credentials.refresh_token else 0
+            }
+            
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
     
     def revoke_access(self, user_id):
         """アクセス権限を削除"""
