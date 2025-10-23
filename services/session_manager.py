@@ -211,13 +211,23 @@ class SessionManager:
     def delete_session(self, user_id):
         """セッションを削除"""
         try:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                
+                cursor.execute('DELETE FROM sessions WHERE user_id = %s', (user_id,))
+                
+                conn.commit()
+                conn.close()
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                
+                cursor.execute('DELETE FROM sessions WHERE user_id = ?', (user_id,))
+                
+                conn.commit()
+                conn.close()
             
-            cursor.execute('DELETE FROM sessions WHERE user_id = ?', (user_id,))
-            
-            conn.commit()
-            conn.close()
             logger.info(f"Session deleted for user: {user_id}")
             
         except Exception as e:
@@ -226,8 +236,53 @@ class SessionManager:
     def save_user_info(self, user_id, user_info):
         """ユーザー情報を永続化"""
         try:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                
+                # 既存ユーザーのgoogle_refresh_tokenを取得
+                cursor.execute('SELECT google_refresh_token FROM users WHERE user_id = %s', (user_id,))
+                existing_token = cursor.fetchone()
+                if existing_token:
+                    google_refresh_token = existing_token[0]
+                else:
+                    google_refresh_token = None
+
+                # INSERT OR REPLACEだとトークンが消えるので、REPLACEではなくUPDATE/INSERTを分岐
+                cursor.execute('SELECT user_id FROM users WHERE user_id = %s', (user_id,))
+                user_exists = cursor.fetchone()
+                if user_exists:
+                    # UPDATE時はトークンを保持
+                    cursor.execute('''
+                        UPDATE users SET company_name = %s, address = %s, bank_account = %s, updated_at = %s
+                        WHERE user_id = %s
+                    ''', (
+                        user_info.get('company_name'),
+                        user_info.get('address'),
+                        user_info.get('bank_account'),
+                        datetime.now(),
+                        user_id
+                    ))
+                else:
+                    # INSERT時はトークンはNoneでOK
+                    cursor.execute('''
+                        INSERT INTO users (user_id, company_name, address, bank_account, google_refresh_token, created_at, updated_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ''', (
+                        user_id,
+                        user_info.get('company_name'),
+                        user_info.get('address'),
+                        user_info.get('bank_account'),
+                        google_refresh_token,
+                        datetime.now(),
+                        datetime.now()
+                    ))
+                
+                conn.commit()
+                conn.close()
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
 
             # 既存ユーザーのgoogle_refresh_tokenを取得
             cursor.execute('SELECT google_refresh_token FROM users WHERE user_id = ?', (user_id,))

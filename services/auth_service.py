@@ -182,7 +182,9 @@ class AuthService:
                 scopes=self.scopes,
                 redirect_uri=self.redirect_uri
             )
+            print(f"[DEBUG] handle_callback: トークン取得開始 - code={code[:20]}...")
             flow.fetch_token(code=code)
+            print(f"[DEBUG] handle_callback: トークン取得成功")
             credentials = flow.credentials
             print(f"[DEBUG] handle_callback: credentials.refresh_token={credentials.refresh_token}")
 
