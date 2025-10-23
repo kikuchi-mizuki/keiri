@@ -237,7 +237,23 @@ class AuthService:
                 logger.error(f"No google token found for user: {user_id}")
                 return None
 
-            token_info = json.loads(token_json)
+            try:
+                token_info = json.loads(token_json)
+            except json.JSONDecodeError as e:
+                print(f"[ERROR] get_credentials: JSON decode error for user: {user_id}, error: {e}")
+                logger.error(f"Invalid token JSON for user: {user_id}, error: {e}")
+                # 無効なJSONの場合はトークンを削除
+                session_manager.save_google_token(user_id, None)
+                return None
+
+            # 必要なフィールドの存在チェック
+            required_fields = ['token', 'refresh_token', 'token_uri', 'client_id', 'client_secret', 'scopes']
+            for field in required_fields:
+                if field not in token_info:
+                    print(f"[ERROR] get_credentials: Missing field '{field}' in token_info for user: {user_id}")
+                    logger.error(f"Missing field '{field}' in token_info for user: {user_id}")
+                    session_manager.save_google_token(user_id, None)
+                    return None
 
             credentials = Credentials(
                 token=token_info['token'],

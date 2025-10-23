@@ -438,6 +438,7 @@ class SessionManager:
                 ''', (user_id,))
                 result = cursor.fetchone()
                 print(f"[DEBUG] get_google_token: 全カラムresult={result}")
+                conn.close()
             else:
                 conn = sqlite3.connect(self.db_path, check_same_thread=False)
                 cursor = conn.cursor()
@@ -447,7 +448,8 @@ class SessionManager:
                 ''', (user_id,))
                 result = cursor.fetchone()
                 print(f"[DEBUG] get_google_token: 全カラムresult={result}")
-            conn.close()
+                conn.close()
+            
             # 旧来の動作も維持
             if result and len(result) >= 5:
                 google_refresh_token = result[4]

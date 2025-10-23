@@ -180,10 +180,17 @@ def auth_callback():
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
+                    # 再認証用のURLを生成
+                    auth_url = auth_service.get_auth_url(state)
+                    if auth_url:
+                        message_text = f"❌ Google認証に失敗しました。\n\nトークンの有効期限が切れている可能性があります。\n\n再度認証を行ってください：\n{auth_url}"
+                    else:
+                        message_text = "❌ Google認証に失敗しました。\n\nトークンの有効期限が切れている可能性があります。\n\n再度認証を行ってください。"
+                    
                     line_bot_api.push_message(
                         PushMessageRequest(
                             to=state,
-                            messages=[TextMessage(text="❌ Google認証に失敗しました。\n\nトークンの有効期限が切れている可能性があります。\n\n再度認証を行ってください。")]
+                            messages=[TextMessage(text=message_text)]
                         )
                     )
             except Exception as e:
