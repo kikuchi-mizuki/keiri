@@ -11,6 +11,9 @@ DATABASE_URL=postgresql://username:password@host:port/database_name
 # AIコレクションズ設定
 AI_COLLECTIONS_BASE_URL=https://ai-collections.herokuapp.com
 
+# Google Sheetsテンプレート設定
+TEMPLATE_SPREADSHEET_ID=your_template_spreadsheet_id
+
 # アプリケーション設定
 FLASK_ENV=development
 FLASK_DEBUG=True 

@@ -331,16 +331,28 @@ class SessionManager:
     def get_user_info(self, user_id):
         """ユーザー情報を取得"""
         try:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                SELECT company_name, address, bank_account 
-                FROM users WHERE user_id = ?
-            ''', (user_id,))
-            
-            result = cursor.fetchone()
-            conn.close()
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT company_name, address, bank_account 
+                    FROM users WHERE user_id = %s
+                ''', (user_id,))
+                
+                result = cursor.fetchone()
+                conn.close()
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT company_name, address, bank_account 
+                    FROM users WHERE user_id = ?
+                ''', (user_id,))
+                
+                result = cursor.fetchone()
+                conn.close()
             
             if result:
                 return {
@@ -453,13 +465,22 @@ class SessionManager:
     def save_spreadsheet_id(self, user_id, spreadsheet_id):
         """ユーザーごとのスプレッドシートIDを保存"""
         try:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE users SET spreadsheet_id = ?, updated_at = ? WHERE user_id = ?
-            ''', (spreadsheet_id, datetime.now(), user_id))
-            conn.commit()
-            conn.close()
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users SET spreadsheet_id = %s, updated_at = %s WHERE user_id = %s
+                ''', (spreadsheet_id, datetime.now(), user_id))
+                conn.commit()
+                conn.close()
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users SET spreadsheet_id = ?, updated_at = ? WHERE user_id = ?
+                ''', (spreadsheet_id, datetime.now(), user_id))
+                conn.commit()
+                conn.close()
             logger.info(f"Spreadsheet ID saved for user: {user_id}")
         except Exception as e:
             logger.error(f"Spreadsheet ID save error: {e}")
@@ -467,13 +488,22 @@ class SessionManager:
     def get_spreadsheet_id(self, user_id):
         """ユーザーごとのスプレッドシートIDを取得"""
         try:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT spreadsheet_id FROM users WHERE user_id = ?
-            ''', (user_id,))
-            result = cursor.fetchone()
-            conn.close()
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT spreadsheet_id FROM users WHERE user_id = %s
+                ''', (user_id,))
+                result = cursor.fetchone()
+                conn.close()
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT spreadsheet_id FROM users WHERE user_id = ?
+                ''', (user_id,))
+                result = cursor.fetchone()
+                conn.close()
             if result:
                 return result[0]
             else:
@@ -485,13 +515,22 @@ class SessionManager:
     def save_estimate_spreadsheet_id(self, user_id, spreadsheet_id):
         """見積書用スプレッドシートIDを保存"""
         try:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE users SET estimate_spreadsheet_id = ?, updated_at = ? WHERE user_id = ?
-            ''', (spreadsheet_id, datetime.now(), user_id))
-            conn.commit()
-            conn.close()
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users SET estimate_spreadsheet_id = %s, updated_at = %s WHERE user_id = %s
+                ''', (spreadsheet_id, datetime.now(), user_id))
+                conn.commit()
+                conn.close()
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users SET estimate_spreadsheet_id = ?, updated_at = ? WHERE user_id = ?
+                ''', (spreadsheet_id, datetime.now(), user_id))
+                conn.commit()
+                conn.close()
             logger.info(f"Estimate spreadsheet ID saved for user: {user_id}")
         except Exception as e:
             logger.error(f"Estimate spreadsheet ID save error: {e}")
@@ -499,13 +538,22 @@ class SessionManager:
     def get_estimate_spreadsheet_id(self, user_id):
         """見積書用スプレッドシートIDを取得"""
         try:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT estimate_spreadsheet_id FROM users WHERE user_id = ?
-            ''', (user_id,))
-            result = cursor.fetchone()
-            conn.close()
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT estimate_spreadsheet_id FROM users WHERE user_id = %s
+                ''', (user_id,))
+                result = cursor.fetchone()
+                conn.close()
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT estimate_spreadsheet_id FROM users WHERE user_id = ?
+                ''', (user_id,))
+                result = cursor.fetchone()
+                conn.close()
             if result:
                 return result[0]
             else:
@@ -517,13 +565,22 @@ class SessionManager:
     def save_invoice_spreadsheet_id(self, user_id, spreadsheet_id):
         """請求書用スプレッドシートIDを保存"""
         try:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE users SET invoice_spreadsheet_id = ?, updated_at = ? WHERE user_id = ?
-            ''', (spreadsheet_id, datetime.now(), user_id))
-            conn.commit()
-            conn.close()
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users SET invoice_spreadsheet_id = %s, updated_at = %s WHERE user_id = %s
+                ''', (spreadsheet_id, datetime.now(), user_id))
+                conn.commit()
+                conn.close()
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users SET invoice_spreadsheet_id = ?, updated_at = ? WHERE user_id = ?
+                ''', (spreadsheet_id, datetime.now(), user_id))
+                conn.commit()
+                conn.close()
             logger.info(f"Invoice spreadsheet ID saved for user: {user_id}")
         except Exception as e:
             logger.error(f"Invoice spreadsheet ID save error: {e}")
@@ -531,13 +588,22 @@ class SessionManager:
     def get_invoice_spreadsheet_id(self, user_id):
         """請求書用スプレッドシートIDを取得"""
         try:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT invoice_spreadsheet_id FROM users WHERE user_id = ?
-            ''', (user_id,))
-            result = cursor.fetchone()
-            conn.close()
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT invoice_spreadsheet_id FROM users WHERE user_id = %s
+                ''', (user_id,))
+                result = cursor.fetchone()
+                conn.close()
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT invoice_spreadsheet_id FROM users WHERE user_id = ?
+                ''', (user_id,))
+                result = cursor.fetchone()
+                conn.close()
             if result:
                 return result[0]
             else:
@@ -549,10 +615,17 @@ class SessionManager:
     def clear_session(self, user_id: str) -> None:
         """ユーザーのセッションを完全にクリアする"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
                 cursor = conn.cursor()
-                cursor.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+                cursor.execute("DELETE FROM sessions WHERE user_id = %s", (user_id,))
                 conn.commit()
-                logger.info(f"Session cleared for user: {user_id}")
+                conn.close()
+            else:
+                with sqlite3.connect(self.db_path) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+                    conn.commit()
+            logger.info(f"Session cleared for user: {user_id}")
         except Exception as e:
             logger.error(f"Error clearing session for user {user_id}: {e}") 

@@ -1581,7 +1581,12 @@ def generate_document(event, session):
             spreadsheet_id = session_manager.get_estimate_spreadsheet_id(user_id)
         else:
             spreadsheet_id = session_manager.get_invoice_spreadsheet_id(user_id)
-        edited_sheets_pdf_url = f"{server_url}/download/edited-sheets/{spreadsheet_id}.pdf?user_id={user_id}" if spreadsheet_id else "(編集シートPDFリンク取得失敗)"
+        
+        if spreadsheet_id:
+            edited_sheets_pdf_url = f"{server_url}/download/edited-sheets/{spreadsheet_id}.pdf?user_id={user_id}"
+        else:
+            print(f"[DEBUG] generate_document: spreadsheet_id取得失敗 - doc_type={doc_type}, user_id={user_id}")
+            edited_sheets_pdf_url = "(編集シートPDFリンク取得失敗 - スプレッドシートIDが見つかりません)"
         
         # 最新の編集済みシートを直接開くリンク（gidも取得して正確なURLにする）
         latest_sheet_name = document_generator.get_latest_edited_sheet_name(spreadsheet_id, user_id) if spreadsheet_id else None
@@ -1739,7 +1744,10 @@ def download_edited_sheets_pdf(spreadsheet_id):
         
     except Exception as e:
         logger.error(f"Edited sheets PDF download error: {e}")
-        return 'PDF生成に失敗しました', 500
+        print(f"[ERROR] download_edited_sheets_pdf: {e}")
+        import traceback
+        traceback.print_exc()
+        return f'PDF生成に失敗しました: {str(e)}', 500
 
 @app.route('/download/pdf/<spreadsheet_id>/<sheet_name>.pdf')
 def download_pdf_sheet(spreadsheet_id, sheet_name):
