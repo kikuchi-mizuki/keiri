@@ -393,6 +393,9 @@ class SessionManager:
                         INSERT INTO users (user_id, google_refresh_token, created_at, updated_at)
                         VALUES (%s, %s, %s, %s)
                     ''', (user_id, refresh_token, datetime.now(), datetime.now()))
+                
+                conn.commit()
+                conn.close()
             else:
                 conn = sqlite3.connect(self.db_path, check_same_thread=False)
                 cursor = conn.cursor()
