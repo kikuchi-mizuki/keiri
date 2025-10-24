@@ -417,9 +417,10 @@ class SessionManager:
                         INSERT INTO users (user_id, company_name, address, bank_account, google_refresh_token, created_at, updated_at)
                         VALUES (?, NULL, NULL, NULL, ?, ?, ?)
                     ''', (user_id, refresh_token, datetime.now(), datetime.now()))
+                
+                conn.commit()
+                conn.close()
             
-            conn.commit()
-            conn.close()
             logger.info(f"Google token saved for user: {user_id}")
             
         except Exception as e:
