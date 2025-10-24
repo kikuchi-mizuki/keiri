@@ -38,6 +38,17 @@ if client_secrets_env:
 
 app = Flask(__name__)
 
+# データベーステーブルの初期化
+print("[DEBUG] Initializing database tables...")
+try:
+    from services.session_manager import SessionManager
+    session_manager = SessionManager()
+    print("[DEBUG] Database tables initialized successfully")
+except Exception as e:
+    print(f"[ERROR] Failed to initialize database tables: {e}")
+    import traceback
+    traceback.print_exc()
+
 # LINE Bot設定
 line_channel_access_token = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 line_channel_secret = os.getenv('LINE_CHANNEL_SECRET')
@@ -56,7 +67,6 @@ with ApiClient(configuration) as api_client:
     line_bot_api = MessagingApi(api_client)
 
 # サービスの初期化
-session_manager = SessionManager()
 google_sheets_service = GoogleSheetsService()
 document_generator = DocumentGenerator()
 auth_service = AuthService()
