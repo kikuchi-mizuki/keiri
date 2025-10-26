@@ -16,9 +16,20 @@ class SessionManager:
         self.db_url = os.getenv('DATABASE_URL', 'sqlite:///sessions.db')
         self.use_postgres = self.db_url.startswith('postgresql://')
         
+        # デバッグ情報を詳細に出力
+        print(f"[DEBUG] SessionManager: DATABASE_URL環境変数存在={os.getenv('DATABASE_URL') is not None}")
+        print(f"[DEBUG] SessionManager: DATABASE_URL値={self.db_url[:50] if self.db_url else 'None'}...")
+        print(f"[DEBUG] SessionManager: use_postgres={self.use_postgres}")
+        
         if self.use_postgres:
             print(f"[DEBUG] SessionManager: PostgreSQL使用 - {self.db_url[:50]}...")
-            self._init_postgres_db()
+            try:
+                self._init_postgres_db()
+                print("[DEBUG] SessionManager: PostgreSQL初期化成功")
+            except Exception as e:
+                print(f"[ERROR] SessionManager: PostgreSQL初期化失敗 - {e}")
+                import traceback
+                traceback.print_exc()
         else:
             # SQLiteファイルパスを抽出
             if self.db_url.startswith('sqlite:///'):
@@ -28,7 +39,13 @@ class SessionManager:
             abs_db_path = os.path.abspath(db_path)
             print(f"[DEBUG] SessionManager: SQLite使用 - DBファイル絶対パス={abs_db_path}")
             self.db_path = abs_db_path
-            self._init_sqlite_db()
+            try:
+                self._init_sqlite_db()
+                print("[DEBUG] SessionManager: SQLite初期化成功")
+            except Exception as e:
+                print(f"[ERROR] SessionManager: SQLite初期化失敗 - {e}")
+                import traceback
+                traceback.print_exc()
         
         # データベースの種類をログに出力
         print(f"[DEBUG] SessionManager: データベースタイプ={'PostgreSQL' if self.use_postgres else 'SQLite'}")

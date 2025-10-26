@@ -44,6 +44,32 @@ try:
     from services.session_manager import SessionManager
     session_manager = SessionManager()
     print("[DEBUG] Database tables initialized successfully")
+    
+    # テーブル作成を明示的に実行
+    print("[DEBUG] Forcing database table creation...")
+    session_manager._init_postgres_db() if session_manager.use_postgres else session_manager._init_sqlite_db()
+    print("[DEBUG] Database table creation completed")
+    
+    # データベース接続テスト
+    print("[DEBUG] Testing database connection...")
+    if session_manager.use_postgres:
+        import psycopg2
+        conn = psycopg2.connect(session_manager.db_url)
+        cursor = conn.cursor()
+        cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+        tables = cursor.fetchall()
+        print(f"[DEBUG] Existing tables: {[table[0] for table in tables]}")
+        conn.close()
+    else:
+        import sqlite3
+        conn = sqlite3.connect(session_manager.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = cursor.fetchall()
+        print(f"[DEBUG] Existing tables: {[table[0] for table in tables]}")
+        conn.close()
+    print("[DEBUG] Database connection test completed")
+    
 except Exception as e:
     print(f"[ERROR] Failed to initialize database tables: {e}")
     import traceback
