@@ -194,7 +194,7 @@ def auth_callback():
         state = request.args.get('state')  # ユーザーID
         print(f"[DEBUG] auth_callback: state={state}, code={code[:20] if code else 'None'}...")
         
-        if auth_service.handle_callback(code, state):
+    if auth_service.handle_callback(code, state):
             print(f"[DEBUG] auth_callback: 認証成功 user_id={state}")
             # 認証完了後に会社情報入力の案内を送信
             try:
@@ -210,9 +210,26 @@ def auth_callback():
                 print(f"[WARNING] Failed to send push message: {e}")
                 # プッシュメッセージ送信に失敗しても認証自体は成功しているので続行
             return "認証が完了しました。LINEに戻って続行してください。"
-        else:
+    else:
             print(f"[DEBUG] auth_callback: 認証失敗 user_id={state}")
-            # 認証失敗時は失敗メッセージのみ送信（メインメニューは送らない）
+            # まれに二重コールバック等でhandle_callbackがFalseでも
+            # 既にトークンが保存済みのことがあるため、最終確認を行う
+            try:
+                if auth_service.is_authenticated(state):
+                    print(f"[DEBUG] auth_callback: 失敗判定だったがトークン確認で認証済み user_id={state}")
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        line_bot_api.push_message(
+                            PushMessageRequest(
+                                to=state,
+                                messages=[TextMessage(text="✅ Google認証が完了しました！\n\n次に会社情報を登録しましょう。\n会社名（法人・屋号含む）を教えてください。")]
+                            )
+                        )
+                    return "認証が完了しました。LINEに戻って続行してください。"
+            except Exception as e:
+                print(f"[WARNING] auth_callback: 認証済み再確認処理で例外: {e}")
+
+            # 認証未完了時のみ失敗メッセージを送信
             try:
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
