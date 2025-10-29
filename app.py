@@ -194,7 +194,7 @@ def auth_callback():
         state = request.args.get('state')  # ユーザーID
         print(f"[DEBUG] auth_callback: state={state}, code={code[:20] if code else 'None'}...")
         
-    if auth_service.handle_callback(code, state):
+        if auth_service.handle_callback(code, state):
             print(f"[DEBUG] auth_callback: 認証成功 user_id={state}")
             # 認証完了後に会社情報入力の案内を送信
             try:
@@ -210,7 +210,7 @@ def auth_callback():
                 print(f"[WARNING] Failed to send push message: {e}")
                 # プッシュメッセージ送信に失敗しても認証自体は成功しているので続行
             return "認証が完了しました。LINEに戻って続行してください。"
-    else:
+        else:
             print(f"[DEBUG] auth_callback: 認証失敗 user_id={state}")
             # まれに二重コールバック等でhandle_callbackがFalseでも
             # 既にトークンが保存済みのことがあるため、最終確認を行う
