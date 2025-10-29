@@ -147,6 +147,8 @@ class SessionManager:
     def create_session(self, user_id, session_data):
         """新しいセッションを作成"""
         try:
+            print(f"[DEBUG] create_session: user_id={user_id}, session_data={session_data}")
+            
             if self.use_postgres:
                 conn = psycopg2.connect(self.db_url)
                 cursor = conn.cursor()
@@ -158,6 +160,9 @@ class SessionManager:
                     ON CONFLICT (user_id) 
                     DO UPDATE SET session_data = EXCLUDED.session_data, updated_at = EXCLUDED.updated_at
                 ''', (user_id, json.dumps(session_data), datetime.now()))
+                
+                print(f"[DEBUG] create_session: PostgreSQL INSERT/UPDATE実行完了")
+                
             else:
                 conn = sqlite3.connect(self.db_path, check_same_thread=False)
                 cursor = conn.cursor()
@@ -167,62 +172,163 @@ class SessionManager:
                     INSERT OR REPLACE INTO sessions (user_id, session_data, updated_at)
                     VALUES (?, ?, ?)
                 ''', (user_id, json.dumps(session_data), datetime.now()))
+                
+                print(f"[DEBUG] create_session: SQLite INSERT/REPLACE実行完了")
             
             conn.commit()
+            print(f"[DEBUG] create_session: コミット完了")
             conn.close()
+            print(f"[DEBUG] create_session: 接続クローズ完了")
+            
+            # 保存直後に確認（簡易版）
+            if self.use_postgres:
+                conn2 = psycopg2.connect(self.db_url)
+                cursor2 = conn2.cursor()
+                cursor2.execute('SELECT COUNT(*) FROM sessions WHERE user_id = %s', (user_id,))
+                count = cursor2.fetchone()[0]
+                conn2.close()
+                print(f"[DEBUG] create_session: 保存直後の確認 - セッション数={count}")
+            else:
+                conn2 = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor2 = conn2.cursor()
+                cursor2.execute('SELECT COUNT(*) FROM sessions WHERE user_id = ?', (user_id,))
+                count = cursor2.fetchone()[0]
+                conn2.close()
+                print(f"[DEBUG] create_session: 保存直後の確認 - セッション数={count}")
+            
             logger.info(f"Session created/updated for user: {user_id}")
             
         except Exception as e:
+            print(f"[ERROR] create_session: {e}")
+            import traceback
+            traceback.print_exc()
             logger.error(f"Session creation error: {e}")
     
     def get_session(self, user_id):
         """セッション情報を取得"""
         try:
+            print(f"[DEBUG] get_session: user_id={user_id}")
+            
             if self.use_postgres:
                 conn = psycopg2.connect(self.db_url)
                 cursor = conn.cursor()
                 
+                # まず最新のセッションを取得（時間制限なし）
                 cursor.execute('''
-                    SELECT session_data FROM sessions 
-                    WHERE user_id = %s AND updated_at > %s
-                ''', (user_id, datetime.now() - timedelta(hours=24)))
+                    SELECT session_data, updated_at FROM sessions 
+                    WHERE user_id = %s
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                ''', (user_id,))
                 
                 result = cursor.fetchone()
                 conn.close()
+                
+                if result:
+                    session_data_str, updated_at = result
+                    print(f"[DEBUG] get_session: セッション発見 - updated_at={updated_at}")
+                    
+                    # 24時間以内かチェック
+                    if updated_at > datetime.now() - timedelta(hours=24):
+                        session_data = json.loads(session_data_str)
+                        logger.info(f"Session retrieved for user: {user_id}")
+                        return session_data
+                    else:
+                        print(f"[DEBUG] get_session: セッション期限切れ - updated_at={updated_at}")
+                        logger.info(f"Session expired for user: {user_id}")
+                        return None
+                else:
+                    print(f"[DEBUG] get_session: セッションが見つからない")
+                    logger.info(f"No session found for user: {user_id}")
+                    return None
             else:
                 conn = sqlite3.connect(self.db_path, check_same_thread=False)
                 cursor = conn.cursor()
                 
+                # まず最新のセッションを取得（時間制限なし）
                 cursor.execute('''
-                    SELECT session_data FROM sessions 
-                    WHERE user_id = ? AND updated_at > ?
-                ''', (user_id, datetime.now() - timedelta(hours=24)))
+                    SELECT session_data, updated_at FROM sessions 
+                    WHERE user_id = ?
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                ''', (user_id,))
                 
                 result = cursor.fetchone()
                 conn.close()
-            
-            if result:
-                session_data = json.loads(result[0])
-                logger.info(f"Session retrieved for user: {user_id}")
-                return session_data
-            else:
-                logger.info(f"No active session found for user: {user_id}")
-                return None
+                
+                if result:
+                    session_data_str, updated_at = result
+                    print(f"[DEBUG] get_session: セッション発見 - updated_at={updated_at}")
+                    
+                    # 24時間以内かチェック
+                    if updated_at > datetime.now() - timedelta(hours=24):
+                        session_data = json.loads(session_data_str)
+                        logger.info(f"Session retrieved for user: {user_id}")
+                        return session_data
+                    else:
+                        print(f"[DEBUG] get_session: セッション期限切れ - updated_at={updated_at}")
+                        logger.info(f"Session expired for user: {user_id}")
+                        return None
+                else:
+                    print(f"[DEBUG] get_session: セッションが見つからない")
+                    logger.info(f"No session found for user: {user_id}")
+                    return None
                 
         except Exception as e:
+            print(f"[ERROR] get_session: {e}")
+            import traceback
+            traceback.print_exc()
             logger.error(f"Session retrieval error: {e}")
             return None
     
     def update_session(self, user_id, updates):
         """セッション情報を更新"""
         try:
-            current_session = self.get_session(user_id) or {}
+            print(f"[DEBUG] update_session: user_id={user_id}, updates={updates}")
+            
+            # 直接データベースから現在のセッションを取得（無限ループ回避）
+            current_session = {}
+            if self.use_postgres:
+                conn = psycopg2.connect(self.db_url)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT session_data FROM sessions 
+                    WHERE user_id = %s
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                ''', (user_id,))
+                result = cursor.fetchone()
+                if result:
+                    current_session = json.loads(result[0])
+                conn.close()
+            else:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT session_data FROM sessions 
+                    WHERE user_id = ?
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                ''', (user_id,))
+                result = cursor.fetchone()
+                if result:
+                    current_session = json.loads(result[0])
+                conn.close()
+            
+            print(f"[DEBUG] update_session: current_session={current_session}")
+            
             updated_session = {**current_session, **updates}
+            print(f"[DEBUG] update_session: updated_session={updated_session}")
             
             self.create_session(user_id, updated_session)
+            print(f"[DEBUG] update_session: create_session呼び出し完了")
+            
             logger.info(f"Session updated for user: {user_id}")
             
         except Exception as e:
+            print(f"[ERROR] update_session: {e}")
+            import traceback
+            traceback.print_exc()
             logger.error(f"Session update error: {e}")
     
     def delete_session(self, user_id):
