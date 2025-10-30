@@ -1354,9 +1354,12 @@ def handle_document_creation(event, session, text):
                 traceback.print_exc()
 
     elif step == 'client_name':
+        # 新規品目入力の開始時に毎回 items を初期化して、
+        # 以前のセッションの品目が残って合計がズレないようにする
         session_manager.update_session(user_id, {
             'client_name': text,
-            'step': 'items'
+            'step': 'items',
+            'items': []
         })
         try:
             print(f"[DEBUG] handle_document_creation: reply_token={event.reply_token}, event={event}")
