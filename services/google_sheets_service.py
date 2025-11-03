@@ -128,35 +128,37 @@ class GoogleSheetsService:
                                 body={'values': [[item.get('name', '')]]}
                             ).execute()
                             print(f"[DEBUG] update_values: A{row} ← {item.get('name', '')}")
-                            # 数量
+                            # 数量（C列に書き込む）
+                            service.spreadsheets().values().update(
+                                spreadsheetId=spreadsheet_id,
+                                range=f'{sheet_name}!C{row}',
+                                valueInputOption='RAW',
+                                body={'values': [[item.get('quantity', '')]]}
+                            ).execute()
+                            print(f"[DEBUG] update_values: C{row} ← {item.get('quantity', '')} (数量)")
+                            # 単価（D列に書き込む）
                             service.spreadsheets().values().update(
                                 spreadsheetId=spreadsheet_id,
                                 range=f'{sheet_name}!D{row}',
                                 valueInputOption='RAW',
-                                body={'values': [[item.get('quantity', '')]]}
-                            ).execute()
-                            print(f"[DEBUG] update_values: D{row} ← {item.get('quantity', '')}")
-                            # 単価
-                            service.spreadsheets().values().update(
-                                spreadsheetId=spreadsheet_id,
-                                range=f'{sheet_name}!E{row}',
-                                valueInputOption='RAW',
                                 body={'values': [[item.get('price', 0) if item.get('price', 0) not in ['', None] else '']]}
                             ).execute()
-                            print(f"[DEBUG] update_values: E{row} ← {item.get('price', 0)}")
-                            # 金額（数量×単価）をC列に書き込む
+                            print(f"[DEBUG] update_values: D{row} ← {item.get('price', 0)} (単価)")
+                            # 金額（数量×単価）をE列に書き込む
+                            # 見積書の列構造: A=品名, B=軽減税率対象, C=数量, D=単価, E=金額
                             amount = item.get('amount', 0)
                             if amount:
                                 service.spreadsheets().values().update(
                                     spreadsheetId=spreadsheet_id,
-                                    range=f'{sheet_name}!C{row}',
+                                    range=f'{sheet_name}!E{row}',
                                     valueInputOption='RAW',
                                     body={'values': [[amount]]}
                                 ).execute()
-                                print(f"[DEBUG] update_values: C{row} ← {amount}")
-                            # B列はテンプレートのフォーマットを保持（書き込みしない）
+                                print(f"[DEBUG] update_values: E{row} ← {amount} (金額)")
+                            # B列（軽減税率対象）はテンプレートのフォーマットを保持（書き込みしない）
                         else:
-                            # データがない行は空にする
+                            # データがない行は空にする（A列、C列、D列、E列のみ）
+                            # B列（軽減税率対象）はテンプレートのフォーマットを保持
                             service.spreadsheets().values().update(
                                 spreadsheetId=spreadsheet_id,
                                 range=f'{sheet_name}!A{row}',
