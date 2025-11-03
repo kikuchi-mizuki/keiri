@@ -196,27 +196,64 @@ def auth_callback():
         
         if auth_service.handle_callback(code, state):
             print(f"[DEBUG] auth_callback: 認証成功 user_id={state}")
-            # 認証完了後に会社情報入力の案内を送信
-            try:
-                with ApiClient(configuration) as api_client:
-                    line_bot_api = MessagingApi(api_client)
-                    line_bot_api.push_message(
-                        PushMessageRequest(
-                            to=state,
-                            messages=[TextMessage(text="✅ Google認証が完了しました！\n\n次に会社情報を登録しましょう。\n会社名（法人・屋号含む）を教えてください。")]
+            # 既存ユーザー情報をデータベースから読み込む
+            user_info = session_manager.get_user_info(state)
+            print(f"[DEBUG] auth_callback: 既存ユーザー情報={user_info}")
+            
+            if user_info and user_info.get('company_name'):
+                # 既存ユーザーの場合：セッションを復元してメインメニューを表示
+                print(f"[DEBUG] auth_callback: 既存ユーザーとして処理 user_id={state}")
+                session_manager.create_session(state, {
+                    'state': 'menu',
+                    'registration_complete': True,
+                    'step': None,
+                    'company_name': user_info.get('company_name'),
+                    'address': user_info.get('address'),
+                    'bank_account': user_info.get('bank_account'),
+                    'items': [],
+                    'notes': '',
+                    'email': ''
+                })
+                try:
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        # メインメニューを表示
+                        buttons_template = TemplateMessage(
+                            altText='メインメニュー',
+                            template=ButtonsTemplate(
+                                title='✅ ログイン完了',
+                                text='何をお手伝いしますか？',
+                                actions=[
+                                    PostbackAction(
+                                        label='📄 見積書を作る',
+                                        data='create_estimate'
+                                    ),
+                                    PostbackAction(
+                                        label='📋 請求書を作る',
+                                        data='create_invoice'
+                                    ),
+                                    PostbackAction(
+                                        label='⚙️ 会社情報を編集',
+                                        data='edit_company_info'
+                                    )
+                                ]
+                            )
                         )
-                    )
-            except Exception as e:
-                print(f"[WARNING] Failed to send push message: {e}")
-                # プッシュメッセージ送信に失敗しても認証自体は成功しているので続行
-            return "認証が完了しました。LINEに戻って続行してください。"
-        else:
-            print(f"[DEBUG] auth_callback: 認証失敗 user_id={state}")
-            # まれに二重コールバック等でhandle_callbackがFalseでも
-            # 既にトークンが保存済みのことがあるため、最終確認を行う
-            try:
-                if auth_service.is_authenticated(state):
-                    print(f"[DEBUG] auth_callback: 失敗判定だったがトークン確認で認証済み user_id={state}")
+                        line_bot_api.push_message(
+                            PushMessageRequest(
+                                to=state,
+                                messages=[buttons_template]
+                            )
+                        )
+                except Exception as e:
+                    print(f"[WARNING] Failed to send push message: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                # 新規ユーザーの場合：会社情報登録を促す
+                print(f"[DEBUG] auth_callback: 新規ユーザーとして処理 user_id={state}")
+                session_manager.create_session(state, {'state': 'registration', 'step': 'company_name'})
+                try:
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
                         line_bot_api.push_message(
@@ -225,6 +262,88 @@ def auth_callback():
                                 messages=[TextMessage(text="✅ Google認証が完了しました！\n\n次に会社情報を登録しましょう。\n会社名（法人・屋号含む）を教えてください。")]
                             )
                         )
+                except Exception as e:
+                    print(f"[WARNING] Failed to send push message: {e}")
+                    import traceback
+                    traceback.print_exc()
+            return "認証が完了しました。LINEに戻って続行してください。"
+        else:
+            print(f"[DEBUG] auth_callback: 認証失敗 user_id={state}")
+            # まれに二重コールバック等でhandle_callbackがFalseでも
+            # 既にトークンが保存済みのことがあるため、最終確認を行う
+            try:
+                if auth_service.is_authenticated(state):
+                    print(f"[DEBUG] auth_callback: 失敗判定だったがトークン確認で認証済み user_id={state}")
+                    # 既存ユーザー情報をデータベースから読み込む
+                    user_info = session_manager.get_user_info(state)
+                    print(f"[DEBUG] auth_callback: 既存ユーザー情報={user_info}")
+                    
+                    if user_info and user_info.get('company_name'):
+                        # 既存ユーザーの場合：セッションを復元してメインメニューを表示
+                        print(f"[DEBUG] auth_callback: 既存ユーザーとして処理 user_id={state}")
+                        session_manager.create_session(state, {
+                            'state': 'menu',
+                            'registration_complete': True,
+                            'step': None,
+                            'company_name': user_info.get('company_name'),
+                            'address': user_info.get('address'),
+                            'bank_account': user_info.get('bank_account'),
+                            'items': [],
+                            'notes': '',
+                            'email': ''
+                        })
+                        try:
+                            with ApiClient(configuration) as api_client:
+                                line_bot_api = MessagingApi(api_client)
+                                # メインメニューを表示
+                                buttons_template = TemplateMessage(
+                                    altText='メインメニュー',
+                                    template=ButtonsTemplate(
+                                        title='✅ ログイン完了',
+                                        text='何をお手伝いしますか？',
+                                        actions=[
+                                            PostbackAction(
+                                                label='📄 見積書を作る',
+                                                data='create_estimate'
+                                            ),
+                                            PostbackAction(
+                                                label='📋 請求書を作る',
+                                                data='create_invoice'
+                                            ),
+                                            PostbackAction(
+                                                label='⚙️ 会社情報を編集',
+                                                data='edit_company_info'
+                                            )
+                                        ]
+                                    )
+                                )
+                                line_bot_api.push_message(
+                                    PushMessageRequest(
+                                        to=state,
+                                        messages=[buttons_template]
+                                    )
+                                )
+                        except Exception as e:
+                            print(f"[WARNING] Failed to send push message: {e}")
+                            import traceback
+                            traceback.print_exc()
+                    else:
+                        # 新規ユーザーの場合：会社情報登録を促す
+                        print(f"[DEBUG] auth_callback: 新規ユーザーとして処理 user_id={state}")
+                        session_manager.create_session(state, {'state': 'registration', 'step': 'company_name'})
+                        try:
+                            with ApiClient(configuration) as api_client:
+                                line_bot_api = MessagingApi(api_client)
+                                line_bot_api.push_message(
+                                    PushMessageRequest(
+                                        to=state,
+                                        messages=[TextMessage(text="✅ Google認証が完了しました！\n\n次に会社情報を登録しましょう。\n会社名（法人・屋号含む）を教えてください。")]
+                                    )
+                                )
+                        except Exception as e:
+                            print(f"[WARNING] Failed to send push message: {e}")
+                            import traceback
+                            traceback.print_exc()
                     return "認証が完了しました。LINEに戻って続行してください。"
             except Exception as e:
                 print(f"[WARNING] auth_callback: 認証済み再確認処理で例外: {e}")
@@ -377,7 +496,30 @@ def handle_message(event):
             return
     
     if not session:
-        # 新規ユーザー - 直接Google認証に進む
+        # セッションがない場合、既存ユーザー情報をデータベースから読み込む
+        user_info = session_manager.get_user_info(user_id)
+        print(f"[DEBUG] handle_message: セッションなし、既存ユーザー情報={user_info}")
+        
+        # 既存ユーザーで登録完了している場合：セッションを復元してメインメニューを表示
+        if user_info and user_info.get('company_name') and auth_service.is_authenticated(user_id):
+            print(f"[DEBUG] handle_message: 既存ユーザーとして処理 user_id={user_id}")
+            session_manager.create_session(user_id, {
+                'state': 'menu',
+                'registration_complete': True,
+                'step': None,
+                'company_name': user_info.get('company_name'),
+                'address': user_info.get('address'),
+                'bank_account': user_info.get('bank_account'),
+                'items': [],
+                'notes': '',
+                'email': ''
+            })
+            # セッション復元後、メッセージを処理
+            session = session_manager.get_session(user_id)
+            handle_existing_user(event, session, text)
+            return
+        
+        # 新規ユーザーまたは未認証ユーザー - Google認証に進む
         auth_url = auth_service.get_auth_url(user_id)
         if auth_url:
             session_manager.create_session(user_id, {'state': 'registration', 'step': 'google_auth'})
