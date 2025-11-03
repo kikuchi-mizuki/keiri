@@ -214,30 +214,10 @@ class GoogleSheetsService:
                             body={'values': [[item.get('price', 0)]]}
                         ).execute()
             
-            # 合計金額の更新（見積書・請求書で異なる）
-            total_amount = data.get('total_amount', 0)
-            print(f"[DEBUG] update_values: total_amount={total_amount}")
-            if total_amount:
-                if data.get('document_type') == 'estimate':
-                    # 見積書の場合：E27に合計金額を書き込む
-                    print(f"[DEBUG] update_values: 見積書の合計金額書き込み - E27 ← {total_amount}")
-                    service.spreadsheets().values().update(
-                        spreadsheetId=spreadsheet_id,
-                        range=f'{sheet_name}!E27',
-                        valueInputOption='RAW',
-                        body={'values': [[total_amount]]}
-                    ).execute()
-                    print(f"[DEBUG] update_values: 見積書の合計金額書き込み完了")
-                else:
-                    # 請求書の場合：合計金額の位置を調整
-                    total_row = 16 + len(items) + 1
-                    service.spreadsheets().values().update(
-                        spreadsheetId=spreadsheet_id,
-                        range=f'{sheet_name}!F{total_row}',
-                        valueInputOption='RAW',
-                        body={'values': [[total_amount]]}
-                    ).execute()
+            # 品目書き込み処理完了のログ
+            print(f"[DEBUG] update_values: 品目書き込み処理完了")
             
+            # 合計金額はエクセルで計算するため、プログラム側での書き込みは不要
             logger.info(f"Values updated successfully for {sheet_name}")
             return True
             
