@@ -90,8 +90,28 @@ class DocumentGenerator:
                 spreadsheet_id = selected_spreadsheet_id
                 is_first = False
                 print(f"[DEBUG] create_document_with_pdf: 既存シート使用 spreadsheet_id={spreadsheet_id}")
+            elif creation_method == 'new_sheet':
+                # 新規シート作成：常に新しいスプレッドシートを作成
+                # 会社名を取得してファイル名に含める
+                user_info = self.session_manager.get_user_info(user_id) or {}
+                company_name = session_data.get('company_name', user_info.get('company_name', ''))
+                spreadsheet_id = self.sheets_service.copy_template(
+                    credentials, user_id, document_type, company_name=company_name
+                )
+                # 不要なタブを削除
+                if document_type == 'estimate':
+                    self.sheets_service.delete_sheet_by_name(credentials, spreadsheet_id, '請求書')
+                elif document_type == 'invoice':
+                    self.sheets_service.delete_sheet_by_name(credentials, spreadsheet_id, '見積書')
+                # document_typeに応じて適切なスプレッドシートIDを保存
+                if document_type == 'estimate':
+                    self.session_manager.save_estimate_spreadsheet_id(user_id, spreadsheet_id)
+                else:
+                    self.session_manager.save_invoice_spreadsheet_id(user_id, spreadsheet_id)
+                is_first = True
+                print(f"[DEBUG] create_document_with_pdf: 新規シート作成 spreadsheet_id={spreadsheet_id}")
             else:
-                # 新規作成または既存シートIDが指定されていない場合
+                # 作成方法が指定されていない場合：既存のスプレッドシートIDを取得
                 if document_type == 'estimate':
                     spreadsheet_id = self.session_manager.get_estimate_spreadsheet_id(user_id)
                 else:
@@ -99,7 +119,7 @@ class DocumentGenerator:
                 
                 is_first = False
                 if not spreadsheet_id:
-                    # 1回目：テンプレートから新規作成
+                    # 既存のスプレッドシートIDがない場合：テンプレートから新規作成
                     # 会社名を取得してファイル名に含める
                     user_info = self.session_manager.get_user_info(user_id) or {}
                     company_name = session_data.get('company_name', user_info.get('company_name', ''))
