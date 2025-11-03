@@ -138,8 +138,42 @@ class GoogleSheetsService:
                                 valueInputOption='RAW',
                                 body={'values': [[item.get('price', 0) if item.get('price', 0) not in ['', None] else '']]}
                             ).execute()
-                            # B列・C列はテンプレートのフォーマットを保持（書き込みしない）
-                        # データがない行もテンプレートのフォーマットを保持（書き込みしない）
+                            # 金額（数量×単価）をC列に書き込む
+                            amount = item.get('amount', 0)
+                            if amount:
+                                service.spreadsheets().values().update(
+                                    spreadsheetId=spreadsheet_id,
+                                    range=f'{sheet_name}!C{row}',
+                                    valueInputOption='RAW',
+                                    body={'values': [[amount]]}
+                                ).execute()
+                            # B列はテンプレートのフォーマットを保持（書き込みしない）
+                        else:
+                            # データがない行は空にする
+                            service.spreadsheets().values().update(
+                                spreadsheetId=spreadsheet_id,
+                                range=f'{sheet_name}!A{row}',
+                                valueInputOption='RAW',
+                                body={'values': [['']]}
+                            ).execute()
+                            service.spreadsheets().values().update(
+                                spreadsheetId=spreadsheet_id,
+                                range=f'{sheet_name}!C{row}',
+                                valueInputOption='RAW',
+                                body={'values': [['']]}
+                            ).execute()
+                            service.spreadsheets().values().update(
+                                spreadsheetId=spreadsheet_id,
+                                range=f'{sheet_name}!D{row}',
+                                valueInputOption='RAW',
+                                body={'values': [['']]}
+                            ).execute()
+                            service.spreadsheets().values().update(
+                                spreadsheetId=spreadsheet_id,
+                                range=f'{sheet_name}!E{row}',
+                                valueInputOption='RAW',
+                                body={'values': [['']]}
+                            ).execute()
                 else:
                     # 請求書の場合：A16、B16、E16、F16
                     for i, item in enumerate(items):
@@ -174,20 +208,25 @@ class GoogleSheetsService:
                         ).execute()
             
             # 合計金額の更新（見積書・請求書で異なる）
-            # total_amount = data.get('total_amount', 0)
-            # if total_amount:
-            #     if data.get('document_type') == 'estimate':
-            #         # 見積書の場合は合計金額を出力しない
-            #         pass
-            #     else:
-            #         # 請求書の場合：合計金額の位置を調整
-            #         total_row = 16 + len(items) + 1
-            #         service.spreadsheets().values().update(
-            #             spreadsheetId=spreadsheet_id,
-            #             range=f'{sheet_name}!F{total_row}',
-            #             valueInputOption='RAW',
-            #             body={'values': [[f"¥{total_amount:,}"]]}
-            #         ).execute()
+            total_amount = data.get('total_amount', 0)
+            if total_amount:
+                if data.get('document_type') == 'estimate':
+                    # 見積書の場合：E27に合計金額を書き込む
+                    service.spreadsheets().values().update(
+                        spreadsheetId=spreadsheet_id,
+                        range=f'{sheet_name}!E27',
+                        valueInputOption='RAW',
+                        body={'values': [[total_amount]]}
+                    ).execute()
+                else:
+                    # 請求書の場合：合計金額の位置を調整
+                    total_row = 16 + len(items) + 1
+                    service.spreadsheets().values().update(
+                        spreadsheetId=spreadsheet_id,
+                        range=f'{sheet_name}!F{total_row}',
+                        valueInputOption='RAW',
+                        body={'values': [[total_amount]]}
+                    ).execute()
             
             logger.info(f"Values updated successfully for {sheet_name}")
             return True
