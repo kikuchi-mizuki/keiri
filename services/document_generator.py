@@ -160,23 +160,12 @@ class DocumentGenerator:
             # 共有リンクを取得
             shareable_link = self.sheets_service.get_shareable_link(credentials, spreadsheet_id)
             print(f"[DEBUG] create_document_with_pdf: shareable_link={shareable_link}")
-            # PDFをエクスポート（タイムアウト対策：エラーが発生しても続行）
+            # PDFエクスポート処理はタイムアウト対策のためスキップ
+            # PDFは後でダウンロードできるエンドポイント（/download/edited-sheets/）を使用
             pdf_filename = None
             pdf_file_id = None
-            try:
-                print(f"[DEBUG] create_document_with_pdf: PDFエクスポート開始")
-                pdf_filename = self.sheets_service.export_to_pdf(credentials, spreadsheet_id, sheet_name=sheet_name)
-                print(f"[DEBUG] create_document_with_pdf: pdf_filename={pdf_filename}")
-                # PDFをGoogle Driveにアップロードし、ファイルIDを取得
-                if pdf_filename:
-                    pdf_file_id = self.upload_pdf_to_drive(credentials, pdf_filename, user_id)
-                    print(f"[DEBUG] create_document_with_pdf: pdf_file_id={pdf_file_id}")
-            except Exception as pdf_error:
-                print(f"[WARNING] create_document_with_pdf: PDFエクスポート/アップロードでエラーが発生しましたが、処理を続行します: {pdf_error}")
-                import traceback
-                traceback.print_exc()
-                logger.warning(f"PDF export/upload error (continuing): {pdf_error}")
-            logger.info(f"Document with PDF created successfully: {spreadsheet_id}, {pdf_filename}, {pdf_file_id}")
+            print(f"[DEBUG] create_document_with_pdf: PDFエクスポート処理をスキップ（タイムアウト対策）")
+            logger.info(f"Document created successfully: {spreadsheet_id}, PDF export skipped")
             return shareable_link, pdf_filename, pdf_file_id
         except Exception as e:
             print(f"[ERROR] create_document_with_pdf: {e}")
