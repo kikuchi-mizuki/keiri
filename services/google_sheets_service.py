@@ -109,14 +109,17 @@ class GoogleSheetsService:
             
             # 品目テーブルの更新（見積書・請求書で異なる）
             items = data.get('items', [])
+            print(f"[DEBUG] update_values: items={items}, items count={len(items) if items else 0}")
             if items:
                 if data.get('document_type') == 'estimate':
                     # 見積書の場合：A16〜E25（最大10行）
                     max_items = 10
+                    print(f"[DEBUG] update_values: 見積書の品目書き込み開始 - {len(items)}件")
                     for i in range(max_items):
                         row = 16 + i
                         if i < len(items):
                             item = items[i]
+                            print(f"[DEBUG] update_values: 品目{i+1} - row={row}, name={item.get('name')}, quantity={item.get('quantity')}, price={item.get('price')}, amount={item.get('amount')}")
                             # 品名
                             service.spreadsheets().values().update(
                                 spreadsheetId=spreadsheet_id,
@@ -124,6 +127,7 @@ class GoogleSheetsService:
                                 valueInputOption='RAW',
                                 body={'values': [[item.get('name', '')]]}
                             ).execute()
+                            print(f"[DEBUG] update_values: A{row} ← {item.get('name', '')}")
                             # 数量
                             service.spreadsheets().values().update(
                                 spreadsheetId=spreadsheet_id,
@@ -131,6 +135,7 @@ class GoogleSheetsService:
                                 valueInputOption='RAW',
                                 body={'values': [[item.get('quantity', '')]]}
                             ).execute()
+                            print(f"[DEBUG] update_values: D{row} ← {item.get('quantity', '')}")
                             # 単価
                             service.spreadsheets().values().update(
                                 spreadsheetId=spreadsheet_id,
@@ -138,6 +143,7 @@ class GoogleSheetsService:
                                 valueInputOption='RAW',
                                 body={'values': [[item.get('price', 0) if item.get('price', 0) not in ['', None] else '']]}
                             ).execute()
+                            print(f"[DEBUG] update_values: E{row} ← {item.get('price', 0)}")
                             # 金額（数量×単価）をC列に書き込む
                             amount = item.get('amount', 0)
                             if amount:
@@ -147,6 +153,7 @@ class GoogleSheetsService:
                                     valueInputOption='RAW',
                                     body={'values': [[amount]]}
                                 ).execute()
+                                print(f"[DEBUG] update_values: C{row} ← {amount}")
                             # B列はテンプレートのフォーマットを保持（書き込みしない）
                         else:
                             # データがない行は空にする
@@ -209,15 +216,18 @@ class GoogleSheetsService:
             
             # 合計金額の更新（見積書・請求書で異なる）
             total_amount = data.get('total_amount', 0)
+            print(f"[DEBUG] update_values: total_amount={total_amount}")
             if total_amount:
                 if data.get('document_type') == 'estimate':
                     # 見積書の場合：E27に合計金額を書き込む
+                    print(f"[DEBUG] update_values: 見積書の合計金額書き込み - E27 ← {total_amount}")
                     service.spreadsheets().values().update(
                         spreadsheetId=spreadsheet_id,
                         range=f'{sheet_name}!E27',
                         valueInputOption='RAW',
                         body={'values': [[total_amount]]}
                     ).execute()
+                    print(f"[DEBUG] update_values: 見積書の合計金額書き込み完了")
                 else:
                     # 請求書の場合：合計金額の位置を調整
                     total_row = 16 + len(items) + 1
