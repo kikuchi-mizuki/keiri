@@ -175,21 +175,24 @@ class DocumentGenerator:
     
     def _prepare_document_data(self, session_data):
         """書類データを準備"""
-        # ユーザー情報を取得
+        # ユーザー情報を取得（常にデータベースから最新情報を取得）
         user_id = session_data.get('user_id')
         user_info = self.session_manager.get_user_info(user_id) or {}
-        
+
+        print(f"[DEBUG] _prepare_document_data: user_id={user_id}, user_info={user_info}")
+
         # 品目の合計金額を計算
         items = session_data.get('items', [])
         total_amount = sum(item.get('amount', 0) for item in items)
-        
+
         # 書類タイプを取得
         document_type = session_data.get('document_type', 'estimate')
-        
+
+        # 会社情報は常にデータベースから取得（最新の情報を保証）
         document_data = {
             'document_type': document_type,
             'issue_date': datetime.now().strftime('%Y-%m-%d'),
-            'company_name': session_data.get('company_name', user_info.get('company_name', '')),
+            'company_name': user_info.get('company_name', ''),
             'name': user_info.get('name', ''),
             'client_name': session_data.get('client_name', ''),
             'address': user_info.get('address', ''),
@@ -207,7 +210,7 @@ class DocumentGenerator:
             'items': items,
             'total_amount': total_amount,
         }
-        print(f"[DEBUG] _prepare_document_data: address={document_data['address']}, phone_number={document_data['phone_number']}, bank_account={document_data['bank_account']}, bank_account_holder={document_data['bank_account_holder']}")
+        print(f"[DEBUG] _prepare_document_data: company_name={document_data['company_name']}, name={document_data['name']}, address={document_data['address']}, phone_number={document_data['phone_number']}, bank_account={document_data['bank_account']}, bank_account_holder={document_data['bank_account_holder']}")
         
         return document_data
     

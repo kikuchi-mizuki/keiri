@@ -1136,11 +1136,17 @@ def handle_registration(event, session, text):
         }
         session_manager.save_user_info(user_id, user_info)
 
-        # 登録完了
+        # 登録完了（会社情報をセッションに保持）
         session_manager.update_session(user_id, {
             'state': 'menu',
             'registration_complete': True,
             'step': None,
+            'company_name': session.get('company_name'),
+            'name': session.get('name'),
+            'address': session.get('address'),
+            'phone_number': session.get('phone_number'),
+            'bank_account': session.get('bank_account'),
+            'bank_account_holder': text,
             'items': [],
             'notes': '',
             'email': ''
