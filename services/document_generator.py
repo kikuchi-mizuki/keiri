@@ -30,8 +30,10 @@ class DocumentGenerator:
             print(f"[DEBUG] create_document: credentials={credentials}")
             if not credentials:
                 raise Exception("Google認証が必要です")
+            # 相手先会社名を取得してファイル名に含める
+            client_name = session_data.get('client_name', '')
             spreadsheet_id = self.sheets_service.copy_template(
-                credentials, user_id, document_type
+                credentials, user_id, document_type, client_name=client_name
             )
             print(f"[DEBUG] create_document: spreadsheet_id={spreadsheet_id}")
             document_data = self._prepare_document_data(session_data)
@@ -92,11 +94,10 @@ class DocumentGenerator:
                 print(f"[DEBUG] create_document_with_pdf: 既存シート使用 spreadsheet_id={spreadsheet_id}")
             elif creation_method == 'new_sheet':
                 # 新規シート作成：常に新しいスプレッドシートを作成
-                # 会社名を取得してファイル名に含める
-                user_info = self.session_manager.get_user_info(user_id) or {}
-                company_name = session_data.get('company_name', user_info.get('company_name', ''))
+                # 相手先会社名を取得してファイル名に含める
+                client_name = session_data.get('client_name', '')
                 spreadsheet_id = self.sheets_service.copy_template(
-                    credentials, user_id, document_type, company_name=company_name
+                    credentials, user_id, document_type, client_name=client_name
                 )
                 # 不要なタブを削除
                 if document_type == 'estimate':
@@ -120,11 +121,10 @@ class DocumentGenerator:
                 is_first = False
                 if not spreadsheet_id:
                     # 既存のスプレッドシートIDがない場合：テンプレートから新規作成
-                    # 会社名を取得してファイル名に含める
-                    user_info = self.session_manager.get_user_info(user_id) or {}
-                    company_name = session_data.get('company_name', user_info.get('company_name', ''))
+                    # 相手先会社名を取得してファイル名に含める
+                    client_name = session_data.get('client_name', '')
                     spreadsheet_id = self.sheets_service.copy_template(
-                        credentials, user_id, document_type, company_name=company_name
+                        credentials, user_id, document_type, client_name=client_name
                     )
                     # 不要なタブを削除
                     if document_type == 'estimate':
@@ -224,10 +224,11 @@ class DocumentGenerator:
             credentials = self.auth_service.get_credentials(user_id)
             if not credentials:
                 raise Exception("Google認証が必要です")
-            
-            # まずスプレッドシートを作成
+
+            # まずスプレッドシートを作成（相手先会社名を含める）
+            client_name = session_data.get('client_name', '')
             spreadsheet_id = self.sheets_service.copy_template(
-                credentials, user_id, document_type
+                credentials, user_id, document_type, client_name=client_name
             )
             
             # データを準備して更新

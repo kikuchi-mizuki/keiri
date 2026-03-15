@@ -27,7 +27,7 @@ class GoogleSheetsService:
             self.service = build('sheets', 'v4', credentials=credentials)
         return self.service
     
-    def copy_template(self, credentials, user_id, document_type, company_name=None):
+    def copy_template(self, credentials, user_id, document_type, client_name=None):
         """テンプレートをコピー"""
         try:
             drive_service = build('drive', 'v3', credentials=credentials)
@@ -36,16 +36,16 @@ class GoogleSheetsService:
                 template_id = self.invoice_spreadsheet_id
             else:
                 template_id = self.template_spreadsheet_id
-            
-            # 会社名を含むファイル名を生成
-            if company_name:
-                # 会社名をファイル名に含める（特殊文字を除去）
-                safe_company_name = re.sub(r'[^\w\s-]', '', company_name).strip()
-                safe_company_name = re.sub(r'[-\s]+', '-', safe_company_name)
-                doc_name = "見積書" if document_type == 'estimate' else "請求書"
-                file_name = f"{safe_company_name}_{doc_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+            # 相手先会社名を含むファイル名を生成
+            doc_name = "見積書" if document_type == 'estimate' else "請求書"
+            if client_name:
+                # 相手先会社名をファイル名に含める（特殊文字を除去）
+                safe_client_name = re.sub(r'[^\w\s-]', '', client_name).strip()
+                safe_client_name = re.sub(r'[-\s]+', '-', safe_client_name)
+                file_name = f"{doc_name}_{safe_client_name}_{datetime.now().strftime('%Y%m%d')}"
             else:
-                file_name = f"{document_type}_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                file_name = f"{doc_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             
             copy_metadata = {
                 'name': file_name,
