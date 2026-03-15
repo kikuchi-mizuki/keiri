@@ -95,12 +95,12 @@ class GoogleSheetsService:
                 else:
                     bank_full_info = ''
 
-                print(f"[DEBUG] 請求書: 住所(E10)={data.get('address', '')}, 振込先(C34)={bank_full_info}")
+                print(f"[DEBUG] 請求書: 住所(F10)={data.get('address', '')}, 振込先(C34)={bank_full_info}")
                 basic_updates = [
-                    ('E8', data.get('company_name', '')),  # 会社名（E8）
-                    ('E9', data.get('name', '')),  # 代表者名/担当者名（E9）
-                    ('E10', data.get('address', '')),    # 住所（E10）
-                    ('E12', data.get('phone_number', '')),  # 電話番号（E12）
+                    ('F8', data.get('company_name', '')),  # 会社名（F8）
+                    ('F9', data.get('name', '')),  # 代表者名/担当者名（F9）
+                    ('F10', data.get('address', '')),    # 住所（F10）
+                    ('F12', data.get('phone_number', '')),  # 電話番号（F12）
                     ('A7', data.get('client_name', '')),  # 宛名
                     ('A16', data.get('transaction_date', '')),  # 取引日
                     ('B16', data.get('item_name', '')),  # 品名
