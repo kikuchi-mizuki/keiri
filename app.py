@@ -44,10 +44,20 @@ try:
     from services.session_manager import SessionManager
     session_manager = SessionManager()
     print("[DEBUG] Database tables initialized successfully")
-    
+
     # テーブル作成を明示的に実行
     print("[DEBUG] Forcing database table creation...")
     session_manager._init_postgres_db() if session_manager.use_postgres else session_manager._init_sqlite_db()
+
+    # 自動マイグレーション実行
+    print("[DEBUG] Running auto-migration...")
+    try:
+        from auto_migrate import check_and_migrate
+        check_and_migrate()
+        print("[DEBUG] Auto-migration completed")
+    except Exception as migrate_error:
+        print(f"[WARNING] Auto-migration failed (non-critical): {migrate_error}")
+        traceback.print_exc()
     print("[DEBUG] Database table creation completed")
     
     # データベース接続テスト
