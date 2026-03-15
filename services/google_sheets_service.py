@@ -75,7 +75,9 @@ class GoogleSheetsService:
                 # 見積書の場合
                 basic_updates = [
                     ('E8', data.get('company_name', '')),  # 会社名
+                    ('E9', data.get('name', '')),  # 代表者名/担当者名
                     ('E10', data.get('address', '')),    # 住所
+                    ('E12', data.get('phone_number', '')),  # 電話番号（E12）
                     ('A7', data.get('client_name', '')),  # 宛名
                     ('A16', data.get('item_name', '')),  # 品名
                     ('D16', data.get('quantity', '')),  # 数量
@@ -83,17 +85,29 @@ class GoogleSheetsService:
                 ]
             else:
                 # 請求書の場合
-                print(f"[DEBUG] 請求書: 住所(F10)={data.get('address', '')}, 振込先(C34)={data.get('bank_account', '')}")
+                # 振込先情報を結合（銀行口座 + 口座名義）
+                bank_info = data.get('bank_account', '')
+                bank_holder = data.get('bank_account_holder', '')
+                if bank_info and bank_holder:
+                    bank_full_info = f"{bank_info} 口座名義：{bank_holder}"
+                elif bank_info:
+                    bank_full_info = bank_info
+                else:
+                    bank_full_info = ''
+
+                print(f"[DEBUG] 請求書: 住所(E10)={data.get('address', '')}, 振込先(C34)={bank_full_info}")
                 basic_updates = [
-                    ('F8', data.get('company_name', '')),  # 会社名（F8）
-                    ('F10', data.get('address', '')),    # 住所（F10）
+                    ('E8', data.get('company_name', '')),  # 会社名（E8）
+                    ('E9', data.get('name', '')),  # 代表者名/担当者名（E9）
+                    ('E10', data.get('address', '')),    # 住所（E10）
+                    ('E12', data.get('phone_number', '')),  # 電話番号（E12）
                     ('A7', data.get('client_name', '')),  # 宛名
                     ('A16', data.get('transaction_date', '')),  # 取引日
                     ('B16', data.get('item_name', '')),  # 品名
                     ('E16', data.get('quantity', '')),  # 数量
                     ('F16', int(data.get('unit_price', 0)) if str(data.get('unit_price', '')).replace('.', '', 1).isdigit() else ''),  # 単価
                     ('G3', data.get('due_date', '')),  # 支払い期日
-                    ('C34', data.get('bank_account', '')),  # 振込先（C34）
+                    ('C34', bank_full_info),  # 振込先（銀行口座 + 口座名義をC34に結合）
                 ]
             
             # 基本情報を更新

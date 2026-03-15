@@ -208,8 +208,11 @@ def auth_callback():
                     'registration_complete': True,
                     'step': None,
                     'company_name': user_info.get('company_name'),
+                    'name': user_info.get('name'),
                     'address': user_info.get('address'),
+                    'phone_number': user_info.get('phone_number'),
                     'bank_account': user_info.get('bank_account'),
+                    'bank_account_holder': user_info.get('bank_account_holder'),
                     'items': [],
                     'notes': '',
                     'email': ''
@@ -286,8 +289,11 @@ def auth_callback():
                             'registration_complete': True,
                             'step': None,
                             'company_name': user_info.get('company_name'),
+                            'name': user_info.get('name'),
                             'address': user_info.get('address'),
+                            'phone_number': user_info.get('phone_number'),
                             'bank_account': user_info.get('bank_account'),
+                            'bank_account_holder': user_info.get('bank_account_holder'),
                             'items': [],
                             'notes': '',
                             'email': ''
@@ -508,8 +514,11 @@ def handle_message(event):
                 'registration_complete': True,
                 'step': None,
                 'company_name': user_info.get('company_name'),
+                'name': user_info.get('name'),
                 'address': user_info.get('address'),
+                'phone_number': user_info.get('phone_number'),
                 'bank_account': user_info.get('bank_account'),
+                'bank_account_holder': user_info.get('bank_account_holder'),
                 'items': [],
                 'notes': '',
                 'email': ''
@@ -1003,17 +1012,17 @@ def handle_registration(event, session, text):
     elif step == 'company_name':
         print(f"[DEBUG] handle_registration: step=company_name, text={text}, session={session}")
         print(f"[DEBUG] handle_registration: 会社名保存前のセッション: {session}")
-        
+
         session_manager.update_session(user_id, {
             'company_name': text,
-            'step': 'address'
+            'step': 'name'
         })
-        
+
         # セッション更新後の状態を確認
         updated_session = session_manager.get_session(user_id)
         print(f"[DEBUG] handle_registration: 会社名保存後のセッション: {updated_session}")
         print(f"[DEBUG] handle_registration: 次のステップ: {updated_session.get('step') if updated_session else 'None'}")
-        
+
         try:
             print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
             with ApiClient(configuration) as api_client:
@@ -1021,7 +1030,29 @@ def handle_registration(event, session, text):
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[TextMessage(text=f"✅ 会社名を「{text}」に設定しました。\n\n次に住所を入力してください。\n例：東京都千代田区丸の内1-1-1")]
+                        messages=[TextMessage(text=f"✅ 会社名を「{text}」に設定しました。\n\n次に代表者名または担当者名を入力してください。\n例：山田太郎")]
+                    )
+                )
+                print(f"[DEBUG] handle_registration: 代表者名入力メッセージ送信完了")
+        except Exception as e:
+            print(f"[ERROR] handle_registration: push_message送信時に例外発生: {e}")
+            import traceback
+            traceback.print_exc()
+
+    elif step == 'name':
+        print(f"[DEBUG] handle_registration: step=name, text={text}, session={session}")
+        session_manager.update_session(user_id, {
+            'name': text,
+            'step': 'address'
+        })
+        try:
+            print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
+                        messages=[TextMessage(text=f"✅ 名前を「{text}」に設定しました。\n\n次に住所を入力してください。\n例：東京都千代田区丸の内1-1-1")]
                     )
                 )
                 print(f"[DEBUG] handle_registration: 住所入力メッセージ送信完了")
@@ -1034,6 +1065,25 @@ def handle_registration(event, session, text):
         print(f"[DEBUG] handle_registration: step=address, text={text}, session={session}")
         session_manager.update_session(user_id, {
             'address': text,
+            'step': 'phone_number'
+        })
+        try:
+            print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
+                        messages=[TextMessage(text=f"✅ 住所を「{text}」に設定しました。\n\n次に電話番号を入力してください。\n例：03-1234-5678")]
+                    )
+                )
+        except Exception as e:
+            print(f"[ERROR] handle_registration: push_message送信時に例外発生: {e}")
+
+    elif step == 'phone_number':
+        print(f"[DEBUG] handle_registration: step=phone_number, text={text}, session={session}")
+        session_manager.update_session(user_id, {
+            'phone_number': text,
             'step': 'bank_account'
         })
         try:
@@ -1043,7 +1093,7 @@ def handle_registration(event, session, text):
                 line_bot_api.push_message(
                     PushMessageRequest(
                         to=user_id,
-                        messages=[TextMessage(text=f"✅ 住所を「{text}」に設定しました。\n\n次に振込先銀行口座を教えてください。\n（例：○○銀行 ○○支店 普通 1234567）")]
+                        messages=[TextMessage(text=f"✅ 電話番号を「{text}」に設定しました。\n\n次に振込先銀行口座を教えてください。\n（例：○○銀行 ○○支店 普通 1234567）")]
                     )
                 )
         except Exception as e:
@@ -1051,16 +1101,38 @@ def handle_registration(event, session, text):
     
     elif step == 'bank_account':
         print(f"[DEBUG] handle_registration: step=bank_account, text={text}, session={session}")
-        # 銀行口座入力完了後、ユーザー情報を永続化して登録完了
         session_manager.update_session(user_id, {
-            'bank_account': text
+            'bank_account': text,
+            'step': 'bank_account_holder'
         })
-        
+        try:
+            print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.push_message(
+                    PushMessageRequest(
+                        to=user_id,
+                        messages=[TextMessage(text=f"✅ 銀行口座を「{text}」に設定しました。\n\n最後に口座名義を入力してください。\n例：カ）サンプルカイシャ または ヤマダタロウ")]
+                    )
+                )
+        except Exception as e:
+            print(f"[ERROR] handle_registration: push_message送信時に例外発生: {e}")
+
+    elif step == 'bank_account_holder':
+        print(f"[DEBUG] handle_registration: step=bank_account_holder, text={text}, session={session}")
+        # 口座名義入力完了後、ユーザー情報を永続化して登録完了
+        session_manager.update_session(user_id, {
+            'bank_account_holder': text
+        })
+
         # ユーザー情報を永続化
         user_info = {
             'company_name': session.get('company_name'),
+            'name': session.get('name'),
             'address': session.get('address'),
-            'bank_account': text
+            'phone_number': session.get('phone_number'),
+            'bank_account': session.get('bank_account'),
+            'bank_account_holder': text
         }
         session_manager.save_user_info(user_id, user_info)
 
@@ -1073,7 +1145,7 @@ def handle_registration(event, session, text):
             'notes': '',
             'email': ''
         })
-        
+
         # 登録完了メッセージとメインメニューを一緒に送信
         try:
             print(f"[DEBUG] handle_registration: reply_token={event.reply_token}, event={event}")

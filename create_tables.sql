@@ -13,8 +13,11 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE TABLE IF NOT EXISTS users (
     user_id VARCHAR(255) PRIMARY KEY,
     company_name TEXT,
+    name TEXT,
     address TEXT,
+    phone_number TEXT,
     bank_account TEXT,
+    bank_account_holder TEXT,
     google_refresh_token TEXT,
     spreadsheet_id TEXT,
     estimate_spreadsheet_id TEXT,

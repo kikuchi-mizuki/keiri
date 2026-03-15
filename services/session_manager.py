@@ -71,8 +71,11 @@ class SessionManager:
                 CREATE TABLE IF NOT EXISTS users (
                     user_id TEXT PRIMARY KEY,
                     company_name TEXT,
+                    name TEXT,
                     address TEXT,
+                    phone_number TEXT,
                     bank_account TEXT,
+                    bank_account_holder TEXT,
                     google_refresh_token TEXT,
                     spreadsheet_id TEXT,
                     estimate_spreadsheet_id TEXT,
@@ -95,6 +98,25 @@ class SessionManager:
                 logger.info("Added invoice_spreadsheet_id column to users table")
             except sqlite3.OperationalError:
                 # カラムが既に存在する場合は無視
+                pass
+
+            # 新しいカラムを追加（存在しない場合のみ）
+            try:
+                cursor.execute('ALTER TABLE users ADD COLUMN name TEXT')
+                logger.info("Added name column to users table")
+            except sqlite3.OperationalError:
+                pass
+
+            try:
+                cursor.execute('ALTER TABLE users ADD COLUMN phone_number TEXT')
+                logger.info("Added phone_number column to users table")
+            except sqlite3.OperationalError:
+                pass
+
+            try:
+                cursor.execute('ALTER TABLE users ADD COLUMN bank_account_holder TEXT')
+                logger.info("Added bank_account_holder column to users table")
+            except sqlite3.OperationalError:
                 pass
             
             conn.commit()
@@ -125,8 +147,11 @@ class SessionManager:
                 CREATE TABLE IF NOT EXISTS users (
                     user_id VARCHAR(255) PRIMARY KEY,
                     company_name TEXT,
+                    name TEXT,
                     address TEXT,
+                    phone_number TEXT,
                     bank_account TEXT,
+                    bank_account_holder TEXT,
                     google_refresh_token TEXT,
                     spreadsheet_id TEXT,
                     estimate_spreadsheet_id TEXT,
@@ -377,25 +402,33 @@ class SessionManager:
                 if user_exists:
                     # UPDATE時はトークンを保持
                     cursor.execute('''
-                        UPDATE users SET company_name = %s, address = %s, bank_account = %s, updated_at = %s
+                        UPDATE users SET company_name = %s, name = %s, address = %s, phone_number = %s,
+                                       bank_account = %s, bank_account_holder = %s, updated_at = %s
                         WHERE user_id = %s
                     ''', (
                         user_info.get('company_name'),
+                        user_info.get('name'),
                         user_info.get('address'),
+                        user_info.get('phone_number'),
                         user_info.get('bank_account'),
+                        user_info.get('bank_account_holder'),
                         datetime.now(),
                         user_id
                     ))
                 else:
                     # INSERT時はトークンはNoneでOK
                     cursor.execute('''
-                        INSERT INTO users (user_id, company_name, address, bank_account, google_refresh_token, created_at, updated_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO users (user_id, company_name, name, address, phone_number,
+                                         bank_account, bank_account_holder, google_refresh_token, created_at, updated_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ''', (
                         user_id,
                         user_info.get('company_name'),
+                        user_info.get('name'),
                         user_info.get('address'),
+                        user_info.get('phone_number'),
                         user_info.get('bank_account'),
+                        user_info.get('bank_account_holder'),
                         google_refresh_token,
                         datetime.now(),
                         datetime.now()
@@ -421,25 +454,33 @@ class SessionManager:
             if user_exists:
                 # UPDATE時はトークンを保持
                 cursor.execute('''
-                    UPDATE users SET company_name = ?, address = ?, bank_account = ?, updated_at = ?
+                    UPDATE users SET company_name = ?, name = ?, address = ?, phone_number = ?,
+                                   bank_account = ?, bank_account_holder = ?, updated_at = ?
                     WHERE user_id = ?
                 ''', (
                     user_info.get('company_name'),
+                    user_info.get('name'),
                     user_info.get('address'),
+                    user_info.get('phone_number'),
                     user_info.get('bank_account'),
+                    user_info.get('bank_account_holder'),
                     datetime.now(),
                     user_id
                 ))
             else:
                 # INSERT時はトークンはNoneでOK
                 cursor.execute('''
-                    INSERT INTO users (user_id, company_name, address, bank_account, google_refresh_token, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO users (user_id, company_name, name, address, phone_number,
+                                     bank_account, bank_account_holder, google_refresh_token, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     user_id,
                     user_info.get('company_name'),
+                    user_info.get('name'),
                     user_info.get('address'),
+                    user_info.get('phone_number'),
                     user_info.get('bank_account'),
+                    user_info.get('bank_account_holder'),
                     google_refresh_token,
                     datetime.now(),
                     datetime.now()
@@ -459,7 +500,7 @@ class SessionManager:
                 cursor = conn.cursor()
                 
                 cursor.execute('''
-                    SELECT company_name, address, bank_account 
+                    SELECT company_name, name, address, phone_number, bank_account, bank_account_holder
                     FROM users WHERE user_id = %s
                 ''', (user_id,))
                 
@@ -470,7 +511,7 @@ class SessionManager:
                 cursor = conn.cursor()
                 
                 cursor.execute('''
-                    SELECT company_name, address, bank_account 
+                    SELECT company_name, name, address, phone_number, bank_account, bank_account_holder
                     FROM users WHERE user_id = ?
                 ''', (user_id,))
                 
@@ -480,8 +521,11 @@ class SessionManager:
             if result:
                 return {
                     'company_name': result[0],
-                    'address': result[1],
-                    'bank_account': result[2]
+                    'name': result[1],
+                    'address': result[2],
+                    'phone_number': result[3],
+                    'bank_account': result[4],
+                    'bank_account_holder': result[5]
                 }
             else:
                 return None

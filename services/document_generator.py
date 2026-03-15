@@ -190,8 +190,10 @@ class DocumentGenerator:
             'document_type': document_type,
             'issue_date': datetime.now().strftime('%Y-%m-%d'),
             'company_name': session_data.get('company_name', user_info.get('company_name', '')),
+            'name': user_info.get('name', ''),
             'client_name': session_data.get('client_name', ''),
             'address': user_info.get('address', ''),
+            'phone_number': user_info.get('phone_number', ''),
             'email': session_data.get('email', ''),
             'phone': session_data.get('phone', user_info.get('phone', '')),
             'fax': user_info.get('fax', ''),
@@ -199,12 +201,13 @@ class DocumentGenerator:
             'representative': session_data.get('representative', user_info.get('representative', '')),
             'business_number': session_data.get('business_number', user_info.get('business_number', '')),
             'bank_account': user_info.get('bank_account', ''),
+            'bank_account_holder': user_info.get('bank_account_holder', ''),
             'due_date': session_data.get('due_date', ''),
             'notes': session_data.get('notes', ''),
             'items': items,
             'total_amount': total_amount,
         }
-        print(f"[DEBUG] _prepare_document_data: address={document_data['address']}, bank_account={document_data['bank_account']}")
+        print(f"[DEBUG] _prepare_document_data: address={document_data['address']}, phone_number={document_data['phone_number']}, bank_account={document_data['bank_account']}, bank_account_holder={document_data['bank_account_holder']}")
         
         return document_data
     
