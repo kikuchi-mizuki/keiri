@@ -141,10 +141,11 @@ class DocumentGenerator:
                 else:
                     print(f"[DEBUG] create_document_with_pdf: 既存spreadsheet_id={spreadsheet_id}")
 
-            # シート名決定
+            # シート名決定とシート番号取得
             if is_first:
                 sheet_name = "見積書" if document_type == 'estimate' else "請求書"
                 template_sheet_name = sheet_name
+                sheet_count = 1  # 最初のシート
             else:
                 # 2回目以降：新しいシート名を自動決定し、テンプレート内容をGASで完全コピー
                 base_name = "見積書" if document_type == 'estimate' else "請求書"
@@ -152,9 +153,16 @@ class DocumentGenerator:
                 template_sheet_name = base_name
                 self.sheets_service.duplicate_sheet_via_gas(spreadsheet_id, template_sheet_name, sheet_name)
 
-            # データを準備して更新
+                # シート番号を取得（全シート数）
+                from googleapiclient.discovery import build
+                service = build('sheets', 'v4', credentials=credentials)
+                spreadsheet_info = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+                sheet_count = len(spreadsheet_info.get('sheets', []))
+
+            # データを準備して更新（シート番号を含める）
             document_data = self._prepare_document_data(session_data)
-            print(f"[DEBUG] create_document_with_pdf: document_data={document_data}")
+            document_data['sheet_count'] = sheet_count  # シート番号を追加
+            print(f"[DEBUG] create_document_with_pdf: document_data={document_data}, sheet_count={sheet_count}")
             self.sheets_service.update_values(credentials, spreadsheet_id, {**document_data, 'document_type': document_type}, sheet_name=sheet_name)
 
             # 共有リンクを取得

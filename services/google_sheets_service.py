@@ -73,7 +73,11 @@ class GoogleSheetsService:
             # 基本情報のセルマッピング（見積書・請求書で異なる）
             if data.get('document_type') == 'estimate':
                 # 見積書の場合
+                # 見積書番号を生成（例: E-20260316-001）
+                estimate_number = data.get('document_number', f"E-{datetime.now().strftime('%Y%m%d')}-{data.get('sheet_count', 1):03d}")
+
                 basic_updates = [
+                    ('G2', estimate_number),  # 見積書番号（G2）
                     ('E8', data.get('company_name', '')),  # 会社名
                     ('E9', data.get('name', '')),  # 代表者名/担当者名
                     ('E10', data.get('address', '')),    # 住所
@@ -85,6 +89,9 @@ class GoogleSheetsService:
                 ]
             else:
                 # 請求書の場合
+                # 請求書番号を生成（例: I-20260316-001）
+                invoice_number = data.get('document_number', f"I-{datetime.now().strftime('%Y%m%d')}-{data.get('sheet_count', 1):03d}")
+
                 # 振込先情報を結合（銀行口座 + 口座名義）
                 bank_info = data.get('bank_account', '')
                 bank_holder = data.get('bank_account_holder', '')
@@ -97,6 +104,7 @@ class GoogleSheetsService:
 
                 print(f"[DEBUG] 請求書: 住所(F10)={data.get('address', '')}, 振込先(C34)={bank_full_info}")
                 basic_updates = [
+                    ('G2', invoice_number),  # 請求書番号（G2）
                     ('F8', data.get('company_name', '')),  # 会社名（F8）
                     ('F9', data.get('name', '')),  # 代表者名/担当者名（F9）
                     ('F10', data.get('address', '')),    # 住所（F10）
