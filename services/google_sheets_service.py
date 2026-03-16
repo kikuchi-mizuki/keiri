@@ -110,125 +110,89 @@ class GoogleSheetsService:
                     ('C34', bank_full_info),  # 振込先（銀行口座 + 口座名義をC34に結合）
                 ]
             
-            # 基本情報を更新
+            # 基本情報をバッチ更新（高速化）
+            batch_data = []
             for cell, value in basic_updates:
                 if value:  # 値がある場合のみ更新
                     print(f"[DEBUG] update_values: {cell} ← {value}")
-                    service.spreadsheets().values().update(
-                        spreadsheetId=spreadsheet_id,
-                        range=f'{sheet_name}!{cell}',
-                        valueInputOption='RAW',
-                        body={'values': [[value]]}
-                    ).execute()
+                    batch_data.append({
+                        'range': f'{sheet_name}!{cell}',
+                        'values': [[value]]
+                    })
+
+            if batch_data:
+                service.spreadsheets().values().batchUpdate(
+                    spreadsheetId=spreadsheet_id,
+                    body={
+                        'valueInputOption': 'RAW',
+                        'data': batch_data
+                    }
+                ).execute()
+                print(f"[DEBUG] update_values: 基本情報をバッチ更新完了（{len(batch_data)}件）")
             
             # 品目テーブルの更新（見積書・請求書で異なる）
             items = data.get('items', [])
             print(f"[DEBUG] update_values: items={items}, items count={len(items) if items else 0}")
             if items:
                 if data.get('document_type') == 'estimate':
-                    # 見積書の場合：A16〜E25（最大10行）
+                    # 見積書の場合：A16〜E25（最大10行）をバッチ更新
                     max_items = 10
                     print(f"[DEBUG] update_values: 見積書の品目書き込み開始 - {len(items)}件")
+
+                    item_batch_data = []
                     for i in range(max_items):
                         row = 16 + i
                         if i < len(items):
                             item = items[i]
                             print(f"[DEBUG] update_values: 品目{i+1} - row={row}, name={item.get('name')}, quantity={item.get('quantity')}, price={item.get('price')}, amount={item.get('amount')}")
-                            # 品名
-                            service.spreadsheets().values().update(
-                                spreadsheetId=spreadsheet_id,
-                                range=f'{sheet_name}!A{row}',
-                                valueInputOption='RAW',
-                                body={'values': [[item.get('name', '')]]}
-                            ).execute()
-                            print(f"[DEBUG] update_values: A{row} ← {item.get('name', '')}")
-                            # 数量（C列に書き込む）
-                            service.spreadsheets().values().update(
-                                spreadsheetId=spreadsheet_id,
-                                range=f'{sheet_name}!C{row}',
-                                valueInputOption='RAW',
-                                body={'values': [[item.get('quantity', '')]]}
-                            ).execute()
-                            print(f"[DEBUG] update_values: C{row} ← {item.get('quantity', '')} (数量)")
-                            # 単価（D列に書き込む）
-                            service.spreadsheets().values().update(
-                                spreadsheetId=spreadsheet_id,
-                                range=f'{sheet_name}!D{row}',
-                                valueInputOption='RAW',
-                                body={'values': [[item.get('price', 0) if item.get('price', 0) not in ['', None] else '']]}
-                            ).execute()
-                            print(f"[DEBUG] update_values: D{row} ← {item.get('price', 0)} (単価)")
-                            # 金額（数量×単価）をE列に書き込む
-                            # 見積書の列構造: A=品名, B=軽減税率対象, C=数量, D=単価, E=金額
-                            amount = item.get('amount', 0)
-                            if amount:
-                                service.spreadsheets().values().update(
-                                    spreadsheetId=spreadsheet_id,
-                                    range=f'{sheet_name}!E{row}',
-                                    valueInputOption='RAW',
-                                    body={'values': [[amount]]}
-                                ).execute()
-                                print(f"[DEBUG] update_values: E{row} ← {amount} (金額)")
-                            # B列（軽減税率対象）はテンプレートのフォーマットを保持（書き込みしない）
+
+                            # 品名、数量、単価、金額を一括追加
+                            item_batch_data.append({'range': f'{sheet_name}!A{row}', 'values': [[item.get('name', '')]]})
+                            item_batch_data.append({'range': f'{sheet_name}!C{row}', 'values': [[item.get('quantity', '')]]})
+                            item_batch_data.append({'range': f'{sheet_name}!D{row}', 'values': [[item.get('price', 0) if item.get('price', 0) not in ['', None] else '']]})
+                            item_batch_data.append({'range': f'{sheet_name}!E{row}', 'values': [[item.get('amount', 0)]]})
                         else:
-                            # データがない行は空にする（A列、C列、D列、E列のみ）
-                            # B列（軽減税率対象）はテンプレートのフォーマットを保持
-                            service.spreadsheets().values().update(
-                                spreadsheetId=spreadsheet_id,
-                                range=f'{sheet_name}!A{row}',
-                                valueInputOption='RAW',
-                                body={'values': [['']]}
-                            ).execute()
-                            service.spreadsheets().values().update(
-                                spreadsheetId=spreadsheet_id,
-                                range=f'{sheet_name}!C{row}',
-                                valueInputOption='RAW',
-                                body={'values': [['']]}
-                            ).execute()
-                            service.spreadsheets().values().update(
-                                spreadsheetId=spreadsheet_id,
-                                range=f'{sheet_name}!D{row}',
-                                valueInputOption='RAW',
-                                body={'values': [['']]}
-                            ).execute()
-                            service.spreadsheets().values().update(
-                                spreadsheetId=spreadsheet_id,
-                                range=f'{sheet_name}!E{row}',
-                                valueInputOption='RAW',
-                                body={'values': [['']]}
-                            ).execute()
+                            # データがない行は空にする
+                            item_batch_data.append({'range': f'{sheet_name}!A{row}', 'values': [['']]})
+                            item_batch_data.append({'range': f'{sheet_name}!C{row}', 'values': [['']]})
+                            item_batch_data.append({'range': f'{sheet_name}!D{row}', 'values': [['']]})
+                            item_batch_data.append({'range': f'{sheet_name}!E{row}', 'values': [['']]})
+
+                    # バッチ更新を実行
+                    if item_batch_data:
+                        service.spreadsheets().values().batchUpdate(
+                            spreadsheetId=spreadsheet_id,
+                            body={
+                                'valueInputOption': 'RAW',
+                                'data': item_batch_data
+                            }
+                        ).execute()
+                        print(f"[DEBUG] update_values: 品目をバッチ更新完了（{len(item_batch_data)}件）")
                 else:
-                    # 請求書の場合：A16、B16、E16、F16
+                    # 請求書の場合：A16、B16、E16、F16をバッチ更新
+                    print(f"[DEBUG] update_values: 請求書の品目書き込み開始 - {len(items)}件")
+
+                    invoice_batch_data = []
                     for i, item in enumerate(items):
                         row = 16 + i
-                        # 取引日（発行日を使用）
-                        service.spreadsheets().values().update(
+                        print(f"[DEBUG] update_values: 品目{i+1} - row={row}, name={item.get('name')}")
+
+                        # 取引日、品名、数量、単価を一括追加
+                        invoice_batch_data.append({'range': f'{sheet_name}!A{row}', 'values': [[data.get('issue_date', '')]]})
+                        invoice_batch_data.append({'range': f'{sheet_name}!B{row}', 'values': [[item.get('name', '')]]})
+                        invoice_batch_data.append({'range': f'{sheet_name}!E{row}', 'values': [[item.get('quantity', '')]]})
+                        invoice_batch_data.append({'range': f'{sheet_name}!F{row}', 'values': [[item.get('price', 0)]]})
+
+                    # バッチ更新を実行
+                    if invoice_batch_data:
+                        service.spreadsheets().values().batchUpdate(
                             spreadsheetId=spreadsheet_id,
-                            range=f'{sheet_name}!A{row}',
-                            valueInputOption='RAW',
-                            body={'values': [[data.get('issue_date', '')]]}
+                            body={
+                                'valueInputOption': 'RAW',
+                                'data': invoice_batch_data
+                            }
                         ).execute()
-                        # 品名
-                        service.spreadsheets().values().update(
-                            spreadsheetId=spreadsheet_id,
-                            range=f'{sheet_name}!B{row}',
-                            valueInputOption='RAW',
-                            body={'values': [[item.get('name', '')]]}
-                        ).execute()
-                        # 数量
-                        service.spreadsheets().values().update(
-                            spreadsheetId=spreadsheet_id,
-                            range=f'{sheet_name}!E{row}',
-                            valueInputOption='RAW',
-                            body={'values': [[item.get('quantity', '')]]}
-                        ).execute()
-                        # 単価
-                        service.spreadsheets().values().update(
-                            spreadsheetId=spreadsheet_id,
-                            range=f'{sheet_name}!F{row}',
-                            valueInputOption='RAW',
-                            body={'values': [[item.get('price', 0)]]}
-                        ).execute()
+                        print(f"[DEBUG] update_values: 請求書品目をバッチ更新完了（{len(invoice_batch_data)}件）")
             
             # 品目書き込み処理完了のログ
             print(f"[DEBUG] update_values: 品目書き込み処理完了")
