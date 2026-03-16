@@ -76,12 +76,16 @@ class GoogleSheetsService:
                 # 見積書番号を生成（例: E-20260316-001）
                 estimate_number = data.get('document_number', f"E-{datetime.now().strftime('%Y%m%d')}-{data.get('sheet_count', 1):03d}")
 
+                # 電話番号にTEL:を追加
+                phone_number = data.get('phone_number', '')
+                phone_with_label = f"TEL: {phone_number}" if phone_number else ''
+
                 basic_updates = [
                     ('F2', estimate_number),  # 見積書番号（F2）
                     ('E8', data.get('company_name', '')),  # 会社名
                     ('E9', data.get('name', '')),  # 代表者名/担当者名
                     ('E10', data.get('address', '')),    # 住所
-                    ('E12', data.get('phone_number', '')),  # 電話番号（E12）
+                    ('E12', phone_with_label),  # 電話番号（E12）
                     ('A7', data.get('client_name', '')),  # 宛名
                 ]
             else:
@@ -99,13 +103,17 @@ class GoogleSheetsService:
                 else:
                     bank_full_info = ''
 
+                # 電話番号にTEL:を追加
+                phone_number = data.get('phone_number', '')
+                phone_with_label = f"TEL: {phone_number}" if phone_number else ''
+
                 print(f"[DEBUG] 請求書: 住所(F10)={data.get('address', '')}, 振込先(C34)={bank_full_info}")
                 basic_updates = [
                     ('F2', invoice_number),  # 請求書番号（F2）
                     ('F8', data.get('company_name', '')),  # 会社名（F8）
                     ('F9', data.get('name', '')),  # 代表者名/担当者名（F9）
                     ('F10', data.get('address', '')),    # 住所（F10）
-                    ('F12', data.get('phone_number', '')),  # 電話番号（F12）
+                    ('F12', phone_with_label),  # 電話番号（F12）
                     ('A7', data.get('client_name', '')),  # 宛名
                     ('G3', data.get('due_date', '')),  # 支払い期日
                     ('C34', bank_full_info),  # 振込先（銀行口座 + 口座名義をC34に結合）
