@@ -1743,6 +1743,7 @@ def handle_document_creation(event, session, text):
                     'quantity': quantity,
                     'amount': price * quantity
                 })
+                print(f"[DEBUG] Item added: name={item_name}, quantity={quantity}, price={price}, amount={price * quantity}")
                 session_manager.update_session(user_id, {'items': items})
                 total = sum(item['amount'] for item in items)
                 response_text = f"✅ 品目を追加しました：{item_name}\n\n現在の品目数：{len(items)}/10\n合計金額：{total:,}円\n\n続けて品目を入力するか、「完了」と入力してください。"

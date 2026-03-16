@@ -77,15 +77,12 @@ class GoogleSheetsService:
                 estimate_number = data.get('document_number', f"E-{datetime.now().strftime('%Y%m%d')}-{data.get('sheet_count', 1):03d}")
 
                 basic_updates = [
-                    ('G2', estimate_number),  # 見積書番号（G2）
+                    ('F2', estimate_number),  # 見積書番号（F2）
                     ('E8', data.get('company_name', '')),  # 会社名
                     ('E9', data.get('name', '')),  # 代表者名/担当者名
                     ('E10', data.get('address', '')),    # 住所
                     ('E12', data.get('phone_number', '')),  # 電話番号（E12）
                     ('A7', data.get('client_name', '')),  # 宛名
-                    ('A16', data.get('item_name', '')),  # 品名
-                    ('D16', data.get('quantity', '')),  # 数量
-                    ('E16', int(data.get('unit_price', 0)) if str(data.get('unit_price', '')).replace('.', '', 1).isdigit() else ''),  # 単価
                 ]
             else:
                 # 請求書の場合
@@ -104,16 +101,12 @@ class GoogleSheetsService:
 
                 print(f"[DEBUG] 請求書: 住所(F10)={data.get('address', '')}, 振込先(C34)={bank_full_info}")
                 basic_updates = [
-                    ('G2', invoice_number),  # 請求書番号（G2）
+                    ('F2', invoice_number),  # 請求書番号（F2）
                     ('F8', data.get('company_name', '')),  # 会社名（F8）
                     ('F9', data.get('name', '')),  # 代表者名/担当者名（F9）
                     ('F10', data.get('address', '')),    # 住所（F10）
                     ('F12', data.get('phone_number', '')),  # 電話番号（F12）
                     ('A7', data.get('client_name', '')),  # 宛名
-                    ('A16', data.get('transaction_date', '')),  # 取引日
-                    ('B16', data.get('item_name', '')),  # 品名
-                    ('E16', data.get('quantity', '')),  # 数量
-                    ('F16', int(data.get('unit_price', 0)) if str(data.get('unit_price', '')).replace('.', '', 1).isdigit() else ''),  # 単価
                     ('G3', data.get('due_date', '')),  # 支払い期日
                     ('C34', bank_full_info),  # 振込先（銀行口座 + 口座名義をC34に結合）
                 ]
@@ -154,15 +147,13 @@ class GoogleSheetsService:
                             item = items[i]
                             print(f"[DEBUG] update_values: 品目{i+1} - row={row}, name={item.get('name')}, quantity={item.get('quantity')}, price={item.get('price')}, amount={item.get('amount')}")
 
-                            # 品名、数量、単価、金額を一括追加
+                            # 品名、数量、単価を一括追加（見積書：D16に数量、E16に単価）
                             item_batch_data.append({'range': f'{sheet_name}!A{row}', 'values': [[item.get('name', '')]]})
-                            item_batch_data.append({'range': f'{sheet_name}!C{row}', 'values': [[item.get('quantity', '')]]})
-                            item_batch_data.append({'range': f'{sheet_name}!D{row}', 'values': [[item.get('price', 0) if item.get('price', 0) not in ['', None] else '']]})
-                            item_batch_data.append({'range': f'{sheet_name}!E{row}', 'values': [[item.get('amount', 0)]]})
+                            item_batch_data.append({'range': f'{sheet_name}!D{row}', 'values': [[item.get('quantity', '')]]})
+                            item_batch_data.append({'range': f'{sheet_name}!E{row}', 'values': [[item.get('price', 0) if item.get('price', 0) not in ['', None] else '']]})
                         else:
                             # データがない行は空にする
                             item_batch_data.append({'range': f'{sheet_name}!A{row}', 'values': [['']]})
-                            item_batch_data.append({'range': f'{sheet_name}!C{row}', 'values': [['']]})
                             item_batch_data.append({'range': f'{sheet_name}!D{row}', 'values': [['']]})
                             item_batch_data.append({'range': f'{sheet_name}!E{row}', 'values': [['']]})
 
