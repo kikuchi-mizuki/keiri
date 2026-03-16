@@ -109,7 +109,7 @@ class GoogleSheetsService:
 
                 print(f"[DEBUG] 請求書: 住所(F10)={data.get('address', '')}, 振込先(C34)={bank_full_info}")
                 basic_updates = [
-                    ('F2', invoice_number),  # 請求書番号（F2）
+                    ('G2', invoice_number),  # 請求書番号（G2）
                     ('F8', data.get('company_name', '')),  # 会社名（F8）
                     ('F9', data.get('name', '')),  # 代表者名/担当者名（F9）
                     ('F10', data.get('address', '')),    # 住所（F10）
